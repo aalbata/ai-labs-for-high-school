@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid World · Hands-On AI for High School</title>
+<style>
+  :root {
+    --ink: #222;
+    --muted: #666;
+    --line: #d0d4d9;
+    --panel: #f6f7f9;
+    --accent: #1f5f99;
+    --agent: #c62828;
+    --good: #2e7d32;
+    --bad: #b71c1c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #fff;
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header {
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px;
+    border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;
+  }
+  .kicker { font-size: 14px; color: var(--muted); }
+  .title { font-size: 32px; font-weight: 700; }
+  .title em { font-style: normal; }
+  .byline { font-size: 14px; color: var(--muted); }
+  .byline .name { color: var(--ink); font-weight: 600; }
+  .intro { margin-bottom: 20px; }
+  .intro h2 { font-size: 22px; margin-bottom: 8px; }
+  .intro p { margin-bottom: 8px; max-width: 75ch; }
+  .intro .keypoint { font-weight: 600; }
+  .toolstrip { margin-bottom: 16px; }
+  .mode-group { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .mode-btn { border: none; border-right: 1px solid var(--line); border-radius: 0; padding: 8px 14px; background: #fff; }
+  .mode-btn:last-child { border-right: none; }
+  .mode-btn.active { background: var(--accent); color: #fff; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .stage { border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .status-line { font-size: 14px; color: var(--muted); margin-bottom: 12px; min-height: 24px; }
+  .status-line strong { color: var(--ink); margin-right: 6px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px;
+    aspect-ratio: 1; max-width: 520px; margin: 0 auto;
+  }
+  .cell {
+    background: #fff; border: 1px solid var(--line); position: relative;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .cell .q-bg { position: absolute; inset: 0; opacity: 0.6; }
+  .cell .arrow { position: relative; z-index: 2; font-size: clamp(16px, 3vw, 22px); color: #333; }
+  .cell.wall { background: #444; border-color: #444; }
+  .cell.goal { background: #d8efd6; border-color: var(--good); }
+  .cell.goal::after { content: '\2605'; position: relative; z-index: 2; font-size: clamp(20px, 4vw, 28px); color: var(--good); }
+  .cell.pit { background: #fdd; border-color: var(--bad); }
+  .cell.pit::after { content: '\2715'; position: relative; z-index: 2; font-size: clamp(20px, 4vw, 26px); color: var(--bad); font-weight: bold; }
+  .agent {
+    position: absolute; z-index: 3; width: 56%; height: 56%; top: 22%; left: 22%;
+    background: var(--agent); border-radius: 50%; transition: all 0.2s ease;
+  }
+  .pulse { animation: pulse 0.3s ease; }
+  @keyframes pulse { 50% { transform: scale(1.12); } }
+  .edit-hint { display: none; font-size: 14px; text-align: center; margin-top: 10px; color: var(--accent); }
+  body.edit-mode .edit-hint { display: block; }
+  body.edit-mode .cell { cursor: pointer; }
+  body.edit-mode .cell:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 14px; border: 1px solid var(--line); }
+  aside { display: flex; flex-direction: column; gap: 16px; }
+  .panel { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: var(--panel); }
+  .panel h3 { font-size: 15px; margin-bottom: 10px; }
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  button {
+    font: inherit; font-size: 14px; padding: 9px 14px; border: 1px solid #aab1b8; border-radius: 6px;
+    background: #fff; color: var(--ink); cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #eef1f4; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: #174a78; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .slider-row { display: flex; flex-direction: column; gap: 4px; }
+  .slider-row label { display: flex; justify-content: space-between; font-size: 14px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .stat-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; border-bottom: 1px solid #e3e6ea; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mission { display: flex; gap: 10px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #e3e6ea; }
+  .mission:last-child { border-bottom: none; }
+  .mission-check {
+    width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; border: 1px solid #888; border-radius: 3px;
+    background: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .mission.done .mission-check { background: var(--good); border-color: var(--good); color: #fff; }
+  .mission.done .mission-check::after { content: '\2713'; }
+  .mission.done .mission-text { color: var(--muted); }
+  .mission-text strong { display: block; }
+  .episode-log { font-family: Consolas, Menlo, monospace; font-size: 12px; color: var(--muted); max-height: 120px; overflow-y: auto; }
+  .episode-log div { padding: 1px 0; }
+  .experiments, .glossary { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .experiments h2, .glossary h2 { font-size: 22px; margin-bottom: 12px; }
+  .experiments h2 em { font-style: normal; }
+  .exp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .exp-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .exp-card h4 { font-size: 16px; margin-bottom: 6px; }
+  .exp-card p { font-size: 14px; margin-bottom: 6px; }
+  .exp-card .predict { font-size: 14px; color: var(--muted); }
+  .exp-card .predict span { font-weight: 600; color: var(--ink); }
+  code { font-family: Consolas, Menlo, monospace; font-size: 0.9em; background: var(--panel); padding: 0 4px; border-radius: 3px; }
+  .glossary dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px 20px; font-size: 15px; }
+  @media (max-width: 600px) { .glossary dl { grid-template-columns: 1fr; gap: 2px; } .glossary dt { margin-top: 8px; } }
+  .glossary dt { font-weight: 600; }
+  .sig { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="titlewrap">
+      <div class="kicker">Hands-On AI for High School, grades 9 to 12</div>
+      <h1 class="title">Grid <em>World</em></h1>
+    </div>
+    <div class="byline">
+      <div class="name">Dr. Ali Al Bataineh</div>
+      <div class="role">Higher Colleges of Technology · aalbataineh@hct.ac.ae</div>
+    </div>
+  </header>
+
+  <section class="intro">
+    <h2>Teach a robot to find the goal</h2>
+    <p>The red dot in the top-left corner is a robot that knows nothing. It can move up, down, left or right, but it does not know where the goal is or that the pits are bad. It has to work that out by trying moves and remembering what happened.</p>
+    <p>Reaching the green goal earns +10 points, falling into a pink pit costs 10 points, and every step costs 0.1 points, so wandering around is not a good plan. <span class="keypoint">Click "Train 100 Episodes" and watch it learn, then change the settings and see what happens.</span></p>
+  </section>
+
+  <div class="toolstrip">
+    <div class="mode-group" role="tablist" aria-label="Mode">
+      <button class="mode-btn active" id="modeTrain" data-mode="train">Train Mode</button>
+      <button class="mode-btn" id="modeEdit" data-mode="edit">Edit World</button>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <div>
+      <div class="stage">
+        <div class="status-line" id="statusLine"><strong>Ready.</strong> Hit "Train 100 Episodes" to start, or click "Edit World" to design your own maze.</div>
+        <div class="grid" id="grid"></div>
+        <div class="edit-hint">Click a cell to cycle it: empty → wall → pit → goal → start → empty. To move the goal or the start, keep clicking a new cell until it becomes the goal or the start.</div>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background: var(--agent); border-radius: 50%;"></span>robot</div>
+          <div class="legend-item"><span class="swatch" style="background: #d8efd6;"></span>goal (+10)</div>
+          <div class="legend-item"><span class="swatch" style="background: #fecaca;"></span>pit (−10)</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--ink);"></span>wall</div>
+          <div class="legend-item"><span class="swatch" style="background: linear-gradient(90deg, #fff, #5aa860);"></span>value (bright = good)</div>
+        </div>
+      </div>
+
+    </div>
+
+    <aside>
+      <div class="panel">
+        <h3>Controls</h3>
+        <div class="controls">
+          <button class="primary" id="btnTrain">Train 100 Episodes</button>
+          <button id="btnStep">Single Step</button>
+          <button id="btnReset">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Parameters</h3>
+        <div class="controls">
+          <div class="slider-row">
+            <label>Epsilon (exploration) <span id="epsVal">0.20</span></label>
+            <input type="range" id="epsSlider" min="0" max="100" value="20">
+          </div>
+          <div class="slider-row">
+            <label>Gamma (future-thinking) <span id="gamVal">0.90</span></label>
+            <input type="range" id="gamSlider" min="0" max="99" value="90">
+          </div>
+          <div class="slider-row">
+            <label>Speed <span id="spdVal">Fast</span></label>
+            <input type="range" id="spdSlider" min="0" max="100" value="80">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Rewards</h3>
+        <div class="controls">
+          <div class="slider-row">
+            <label>Goal reward <span id="rewGoalVal">+10</span></label>
+            <input type="range" id="rewGoalSlider" min="1" max="50" value="10">
+          </div>
+          <div class="slider-row">
+            <label>Pit penalty <span id="rewPitVal">−10</span></label>
+            <input type="range" id="rewPitSlider" min="-50" max="0" value="-10">
+          </div>
+          <div class="slider-row">
+            <label>Step cost <span id="rewStepVal">−0.10</span></label>
+            <input type="range" id="rewStepSlider" min="-100" max="0" value="-10">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Statistics</h3>
+        <div class="stat-row"><span>Episode</span><span id="statEp">0</span></div>
+        <div class="stat-row"><span>Total steps</span><span id="statSteps">0</span></div>
+        <div class="stat-row"><span>Last reward</span><span id="statReward">n/a</span></div>
+        <div class="stat-row"><span>Avg reward (10)</span><span id="statAvg">n/a</span></div>
+        <div class="stat-row"><span>Success rate</span><span id="statWin">n/a</span></div>
+      </div>
+
+      <div class="panel">
+        <h3>Missions</h3>
+        <div id="missions">
+          <div class="mission" data-mission="first-train">
+            <div class="mission-check"></div>
+            <div class="mission-text">
+              <strong>Mission 01</strong>
+              Train 100 episodes. Watch the arrows appear.
+            </div>
+          </div>
+          <div class="mission" data-mission="success-80">
+            <div class="mission-check"></div>
+            <div class="mission-text">
+              <strong>Mission 02</strong>
+              Get the success rate above 80%.
+            </div>
+          </div>
+          <div class="mission" data-mission="eps-zero">
+            <div class="mission-check"></div>
+            <div class="mission-text">
+              <strong>Mission 03</strong>
+              Set epsilon to 0 and reset. Train again. What happens?
+            </div>
+          </div>
+          <div class="mission" data-mission="custom-world">
+            <div class="mission-check"></div>
+            <div class="mission-text">
+              <strong>Mission 04</strong>
+              Use Edit World to make your own maze, then train.
+            </div>
+          </div>
+          <div class="mission" data-mission="break-it">
+            <div class="mission-check"></div>
+            <div class="mission-text">
+              <strong>Mission 05</strong>
+              Make the step cost 0. See if the robot wanders.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Recent Episodes</h3>
+        <div class="episode-log" id="log">
+          <div>waiting for training...</div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <section class="experiments">
+        <h2>Experiments to <em>try</em></h2>
+    <div class="exp-grid">
+      <div class="exp-card">
+        <h4>1. The greedy robot</h4>
+        <p>Reset everything. Set <code>epsilon</code> to <strong>0</strong>. Train 100 episodes. The robot never explores on purpose. It always picks the move that currently looks best, choosing at random only when several moves look equally good.</p>
+        <div class="predict"><span>Predict:</span> Will it find the goal? Or get stuck doing the same wrong thing forever?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>2. The chaotic robot</h4>
+        <p>Reset, then push <code>epsilon</code> all the way to <strong>1.00</strong>. Train. Now the robot ignores what it learned and just moves randomly every time.</p>
+        <div class="predict"><span>Predict:</span> Why does the success rate go down even after a lot of training?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>3. Short-sighted vs. far-seeing</h4>
+        <p>Try <code>gamma = 0.10</code>. The robot only cares about what's about to happen, not the goal far away. Then try <code>gamma = 0.99</code>.</p>
+        <div class="predict"><span>Predict:</span> Which one ends up with brighter green cells far from the goal?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>4. The lava floor</h4>
+        <p>Drag the step cost slider to its most negative value. Now every step really hurts. The robot wants to escape as fast as possible.</p>
+        <div class="predict"><span>Predict:</span> Will the path it learns be shorter than before?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>5. Free wandering</h4>
+        <p>Set step cost to <strong>0</strong>. Now there's no penalty for taking forever. Reset and train.</p>
+        <div class="predict"><span>Predict:</span> Will the arrows still point a sensible direction, or will they look messy?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>6. Build a trap</h4>
+        <p>Switch to Edit World. Surround the goal with pits, leaving only one safe square next to it. Switch back and train.</p>
+        <div class="predict"><span>Predict:</span> Can it still solve it? How long does it take?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>7. Two robots, same world</h4>
+        <p>Open the page in two browser tabs. Use the same maze in both. In tab one, set epsilon high. In tab two, set epsilon low. Train both for 100 episodes.</p>
+        <div class="predict"><span>Predict:</span> Which tab learns the maze faster? Does the answer change if you make a really hard maze?</div>
+      </div>
+
+      <div class="exp-card">
+        <h4>8. The huge prize</h4>
+        <p>Crank the goal reward up to <strong>+50</strong>. Reset and train.</p>
+        <div class="predict"><span>Predict:</span> Does it learn faster, slower, or about the same? Why?</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="glossary">
+    <h2>Words you'll hear</h2>
+    <dl>
+      <dt>Agent</dt>
+      <dd>The robot. The thing that's learning. In real life, this could be a self-driving car, a video game character, or a chess program.</dd>
+
+      <dt>Environment</dt>
+      <dd>The grid. Everything the agent moves around in.</dd>
+
+      <dt>Reward</dt>
+      <dd>A number the environment gives back after every move. Positive means good, negative means bad. The agent's only goal is to collect as much total reward as it can.</dd>
+
+      <dt>Episode</dt>
+      <dd>One full attempt, from the start square until the agent reaches the goal, falls in a pit, or runs out of time (100 steps).</dd>
+
+      <dt>Policy</dt>
+      <dd>The agent's strategy. After training, the arrows on each cell show its policy: "if I'm here, this is the direction I should go."</dd>
+
+      <dt>Q-value</dt>
+      <dd>How good a move looks, based on what's happened so far. Each cell has four Q-values, one for each direction. The brightness of the cell is the best of those four.</dd>
+
+      <dt>Epsilon (ε)</dt>
+      <dd>Chance of moving randomly instead of doing what the agent thinks is best. High epsilon = lots of exploring. Low epsilon = stick with what you know.</dd>
+
+      <dt>Gamma (γ)</dt>
+      <dd>How much the agent cares about future rewards versus right-now rewards. Low gamma = lives in the moment. High gamma = thinks ahead.</dd>
+
+      <dt>Alpha (α)</dt>
+      <dd>How fast the agent updates its mind. Locked at 0.1 here. Bigger alpha = changes its strategy faster (sometimes too fast).</dd>
+    </dl>
+  </section>
+
+  <div class="sig">
+    <span id="sigParams">Q-learning · γ = 0.90 · α = 0.1</span>
+    <span class="sig-name">Dr. Ali Al Bataineh · Higher Colleges of Technology</span>
+  </div>
+</div>
+
+<script>
+  // Grid configuration (mutable so Edit World can change them)
+  const ROWS = 6, COLS = 6;
+  let START = [0, 0];
+  let GOAL = [5, 5];
+  // Where the goal and the start go back to when a cell cycles past them in Edit World
+  let GOAL_HOME = [5, 5];
+  let START_HOME = [0, 0];
+  let PITS = [[2, 3], [3, 1], [4, 4]];
+  let WALLS = [[1, 2], [3, 3], [2, 1]];
+
+  // Hyperparameters
+  const ALPHA = 0.1;
+  const MAX_STEPS = 100;   // an episode that has not ended after this many steps times out
+  let GAMMA = 0.9;
+  let epsilon = 0.2;
+
+  // Rewards (mutable)
+  let REWARD_GOAL = 10;
+  let REWARD_PIT = -10;
+  let REWARD_STEP = -0.1;
+
+  // Edit mode state
+  let editMode = false;
+  // Cell types in cycle order: empty, wall, pit, goal, start
+  const CELL_TYPES = ['empty', 'wall', 'pit', 'goal', 'start'];
+
+  // Mission tracking
+  const missionsDone = new Set();
+
+  // Actions: 0=up, 1=right, 2=down, 3=left
+  const ACTIONS = [[-1,0],[0,1],[1,0],[0,-1]];
+  const ARROWS = ['↑','→','↓','←'];
+
+  // Q-table: rows x cols x 4 actions
+  let Q;
+  let agent = [...START];
+  let episode = 0;
+  let totalSteps = 0;
+  let lastReward = null;
+  let rewardHistory = [];
+  let wins = 0;
+  let attempts = 0;
+  let training = false;
+  let trainingCancel = false;
+
+  const gridEl = document.getElementById('grid');
+  const epsSlider = document.getElementById('epsSlider');
+  const epsVal = document.getElementById('epsVal');
+  const spdSlider = document.getElementById('spdSlider');
+  const spdVal = document.getElementById('spdVal');
+
+  function isWall(r, c) {
+    return WALLS.some(([wr, wc]) => wr === r && wc === c);
+  }
+  function isPit(r, c) {
+    return PITS.some(([pr, pc]) => pr === r && pc === c);
+  }
+  function isGoal(r, c) {
+    return GOAL[0] === r && GOAL[1] === c;
+  }
+  function isTerminal(r, c) {
+    return isGoal(r, c) || isPit(r, c);
+  }
+
+  function resetQ() {
+    Q = [];
+    for (let r = 0; r < ROWS; r++) {
+      Q.push([]);
+      for (let c = 0; c < COLS; c++) {
+        Q[r].push([0, 0, 0, 0]);
+      }
+    }
+  }
+
+  function maxQ(r, c) {
+    return Math.max(...Q[r][c]);
+  }
+
+  function bestAction(r, c) {
+    let best = 0;
+    let bestVal = Q[r][c][0];
+    for (let i = 1; i < 4; i++) {
+      if (Q[r][c][i] > bestVal) {
+        bestVal = Q[r][c][i];
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  function chooseAction(r, c) {
+    if (Math.random() < epsilon) {
+      return Math.floor(Math.random() * 4);
+    }
+    // Tie-break randomly among best
+    const vals = Q[r][c];
+    const best = Math.max(...vals);
+    const tied = [];
+    for (let i = 0; i < 4; i++) if (vals[i] === best) tied.push(i);
+    return tied[Math.floor(Math.random() * tied.length)];
+  }
+
+  function step(r, c, action) {
+    const [dr, dc] = ACTIONS[action];
+    let nr = r + dr;
+    let nc = c + dc;
+    // Bounds and walls: stay in place
+    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || isWall(nr, nc)) {
+      nr = r; nc = c;
+    }
+    let reward = REWARD_STEP;
+    let done = false;
+    if (isGoal(nr, nc)) { reward = REWARD_GOAL; done = true; }
+    else if (isPit(nr, nc)) { reward = REWARD_PIT; done = true; }
+    return { nr, nc, reward, done };
+  }
+
+  function runEpisode(maxSteps = MAX_STEPS) {
+    let [r, c] = START;
+    let total = 0;
+    let steps = 0;
+    let won = false;
+    let endedInPit = false;
+    for (let t = 0; t < maxSteps; t++) {
+      const a = chooseAction(r, c);
+      const { nr, nc, reward, done } = step(r, c, a);
+      // Q-learning update
+      const target = reward + (done ? 0 : GAMMA * maxQ(nr, nc));
+      Q[r][c][a] += ALPHA * (target - Q[r][c][a]);
+      r = nr; c = nc;
+      total += reward;
+      steps++;
+      if (done) {
+        if (isGoal(r, c)) won = true;
+        else if (isPit(r, c)) endedInPit = true;
+        break;
+      }
+    }
+    return { total, steps, won, endedInPit };
+  }
+
+  async function runEpisodeAnimated(delayMs) {
+    let [r, c] = START;
+    agent = [r, c];
+    renderAgent();
+    let total = 0;
+    let steps = 0;
+    let won = false;
+    let endedInPit = false;
+    for (let t = 0; t < MAX_STEPS; t++) {
+      const a = chooseAction(r, c);
+      const { nr, nc, reward, done } = step(r, c, a);
+      const target = reward + (done ? 0 : GAMMA * maxQ(nr, nc));
+      Q[r][c][a] += ALPHA * (target - Q[r][c][a]);
+      r = nr; c = nc;
+      agent = [r, c];
+      total += reward;
+      steps++;
+      totalSteps++;
+      renderAgent();
+      renderCells();
+      updateStats();
+      if (delayMs > 0) await sleep(delayMs);
+      if (done) {
+        if (isGoal(r, c)) won = true;
+        else if (isPit(r, c)) endedInPit = true;
+        break;
+      }
+      if (trainingCancel) return null;
+    }
+    return { total, steps, won, endedInPit };
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function valueColor(v) {
+    // Normalize to whichever reward magnitude is bigger right now
+    const scale = Math.max(Math.abs(REWARD_GOAL), Math.abs(REWARD_PIT), 1);
+    const clamped = Math.max(-scale, Math.min(scale, v));
+    if (clamped >= 0) {
+      const t = clamped / scale;
+      // white to green
+      const r = Math.round(255 - t * (255 - 90));
+      const g = Math.round(255 - t * (255 - 168));
+      const b = Math.round(255 - t * (255 - 96));
+      return `rgb(${r},${g},${b})`;
+    } else {
+      const t = -clamped / scale;
+      const r = Math.round(255 - t * (255 - 254));
+      const g = Math.round(255 - t * (255 - 202));
+      const b = Math.round(255 - t * (255 - 202));
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        if (isWall(r, c)) cell.classList.add('wall');
+        else if (isGoal(r, c)) cell.classList.add('goal');
+        else if (isPit(r, c)) cell.classList.add('pit');
+        else {
+          const bg = document.createElement('div');
+          bg.className = 'q-bg';
+          cell.appendChild(bg);
+          const arrow = document.createElement('span');
+          arrow.className = 'arrow';
+          cell.appendChild(arrow);
+        }
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  function renderCells() {
+    const cells = gridEl.children;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = cells[r * COLS + c];
+        if (isWall(r, c) || isGoal(r, c) || isPit(r, c)) continue;
+        const bg = cell.querySelector('.q-bg');
+        const arrow = cell.querySelector('.arrow');
+        const v = maxQ(r, c);
+        bg.style.background = valueColor(v);
+        const hasLearned = Q[r][c].some(q => q !== 0);
+        if (hasLearned) {
+          arrow.textContent = ARROWS[bestAction(r, c)];
+        } else {
+          arrow.textContent = '·';
+          arrow.style.opacity = '0.25';
+        }
+      }
+    }
+  }
+
+  function renderAgent() {
+    // Remove existing agent
+    const existing = document.querySelector('.agent');
+    if (existing) existing.remove();
+    const [r, c] = agent;
+    const cells = gridEl.children;
+    const cell = cells[r * COLS + c];
+    const a = document.createElement('div');
+    a.className = 'agent pulse';
+    cell.appendChild(a);
+  }
+
+  function updateStats() {
+    document.getElementById('statEp').textContent = episode;
+    document.getElementById('statSteps').textContent = totalSteps;
+    document.getElementById('statReward').textContent =
+      lastReward === null ? 'n/a' : lastReward.toFixed(2);
+    if (rewardHistory.length > 0) {
+      const recent = rewardHistory.slice(-10);
+      const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+      document.getElementById('statAvg').textContent = avg.toFixed(2);
+    }
+    if (attempts > 0) {
+      const pct = (wins / attempts * 100).toFixed(0);
+      document.getElementById('statWin').textContent = `${pct}% (${wins}/${attempts})`;
+    }
+  }
+
+  function logEpisode(ep, result) {
+    const log = document.getElementById('log');
+    if (log.children[0]?.textContent === 'waiting for training...') {
+      log.innerHTML = '';
+    }
+    const entry = document.createElement('div');
+    let outcome;
+    if (result.won) outcome = '★ goal';
+    else if (result.endedInPit) outcome = '✕ pit';
+    else outcome = '○ timeout';
+    entry.textContent = `ep ${String(ep).padStart(4,'0')} · ${String(result.steps).padStart(3)} steps · r=${result.total.toFixed(1).padStart(6)} · ${outcome}`;
+    log.insertBefore(entry, log.firstChild);
+    while (log.children.length > 20) log.removeChild(log.lastChild);
+  }
+
+  // Plain-language status line for students
+  function setStatus(html) {
+    document.getElementById('statusLine').innerHTML = html;
+  }
+
+  function updateStatusFromTraining(result) {
+    if (result.won) {
+      setStatus(`<strong>Win!</strong> Reached the goal in ${result.steps} steps. Total reward: ${result.total.toFixed(1)}.`);
+    } else if (result.endedInPit) {
+      setStatus(`<strong>Ouch.</strong> Fell in a pit after ${result.steps} steps. The robot will remember this.`);
+    } else {
+      setStatus(`<strong>Time's up.</strong> Wandered for ${result.steps} steps without finishing. Try lowering epsilon, or train more.`);
+    }
+  }
+
+  // Mission detection
+  function checkMissions() {
+    const missions = document.querySelectorAll('.mission');
+
+    function mark(name) {
+      if (missionsDone.has(name)) return;
+      const el = document.querySelector(`.mission[data-mission="${name}"]`);
+      if (el) {
+        el.classList.add('done');
+        missionsDone.add(name);
+      }
+    }
+
+    if (episode >= 100) mark('first-train');
+
+    if (attempts >= 20) {
+      const pct = wins / attempts * 100;
+      if (pct >= 80) mark('success-80');
+    }
+
+    if (epsilon === 0 && episode >= 30 && attempts >= 30) mark('eps-zero');
+
+    // Custom-world: check if the maze differs from the default
+    const sortPairs = arr => arr.map(p => p.join(',')).sort().join('|');
+    const defaultPits = [[2, 3], [3, 1], [4, 4]];
+    const defaultWalls = [[1, 2], [3, 3], [2, 1]];
+    const sameLayout =
+      sortPairs(PITS) === sortPairs(defaultPits) &&
+      sortPairs(WALLS) === sortPairs(defaultWalls) &&
+      START[0] === 0 && START[1] === 0 &&
+      GOAL[0] === 5 && GOAL[1] === 5;
+    if (!sameLayout && episode >= 30) mark('custom-world');
+
+    if (REWARD_STEP === 0 && episode >= 20) mark('break-it');
+  }
+
+  async function train(episodes) {
+    if (training) return;
+    training = true;
+    trainingCancel = false;
+    document.getElementById('btnTrain').disabled = true;
+    document.getElementById('btnStep').disabled = true;
+    setStatus(`<strong>Training...</strong> Running ${episodes} episodes. Watch the cells turn green where the robot wants to go.`);
+
+    const spd = parseInt(spdSlider.value);
+    // 70 and above = no animation, just a fast batch
+    const animate = spd < 70;
+    const delay = animate ? Math.max(10, 200 - spd * 2) : 0;
+
+    let lastResult = null;
+    for (let i = 0; i < episodes; i++) {
+      if (trainingCancel) break;
+      episode++;
+      let result;
+      if (animate && i < 5) {
+        // Animate first few
+        result = await runEpisodeAnimated(delay);
+        if (!result) break;
+      } else {
+        result = runEpisode();
+      }
+      rewardHistory.push(result.total);
+      attempts++;
+      if (result.won) wins++;
+      lastReward = result.total;
+      lastResult = result;
+      logEpisode(episode, result);
+      if (i % 5 === 0 || !animate) {
+        renderCells();
+        updateStats();
+        if (!animate) await sleep(1);
+      }
+    }
+    renderCells();
+    updateStats();
+    if (lastResult) {
+      const pct = attempts > 0 ? (wins / attempts * 100).toFixed(0) : 0;
+      setStatus(`<strong>Done.</strong> Trained ${episode} total episodes. Success rate: ${pct}%. Try changing a slider and training more.`);
+    }
+    checkMissions();
+    training = false;
+    document.getElementById('btnTrain').disabled = false;
+    document.getElementById('btnStep').disabled = false;
+  }
+
+  async function singleEpisode() {
+    if (training) return;
+    training = true;
+    trainingCancel = false;
+    document.getElementById('btnTrain').disabled = true;
+    document.getElementById('btnStep').disabled = true;
+    episode++;
+    setStatus(`<strong>Watching...</strong> One episode at full speed. The robot is choosing each move based on what it knows so far.`);
+    const result = await runEpisodeAnimated(120);
+    if (result) {
+      rewardHistory.push(result.total);
+      attempts++;
+      if (result.won) wins++;
+      lastReward = result.total;
+      logEpisode(episode, result);
+      updateStatusFromTraining(result);
+    }
+    renderCells();
+    updateStats();
+    checkMissions();
+    training = false;
+    document.getElementById('btnTrain').disabled = false;
+    document.getElementById('btnStep').disabled = false;
+  }
+
+  function reset() {
+    trainingCancel = true;
+    setTimeout(() => {
+      trainingCancel = false;
+      resetQ();
+      agent = [...START];
+      episode = 0;
+      totalSteps = 0;
+      lastReward = null;
+      rewardHistory = [];
+      wins = 0;
+      attempts = 0;
+      document.getElementById('log').innerHTML = '<div>waiting for training...</div>';
+      renderCells();
+      renderAgent();
+      updateStats();
+      setStatus(`<strong>Reset.</strong> Q-table cleared. The robot has forgotten everything.`);
+    }, 100);
+  }
+
+  // ====== Edit world ======
+
+  function getCellType(r, c) {
+    if (isWall(r, c)) return 'wall';
+    if (isPit(r, c)) return 'pit';
+    if (isGoal(r, c)) return 'goal';
+    if (START[0] === r && START[1] === c) return 'start';
+    return 'empty';
+  }
+
+
+  function samePlace(a, b) { return a[0] === b[0] && a[1] === b[1]; }
+
+  function clearCell(r, c) {
+    WALLS = WALLS.filter(([wr, wc]) => !(wr === r && wc === c));
+    PITS = PITS.filter(([pr, pc]) => !(pr === r && pc === c));
+  }
+
+  function cycleCell(r, c) {
+    if (training) return; // Don't edit mid-training
+    // Each click moves a cell one step along: empty -> wall -> pit -> goal -> start -> empty.
+    // The goal and the start always have exactly one square. When a cell cycles past the goal
+    // (or the start), the goal (or the start) goes back to the square it came from.
+    const here = [r, c];
+    const current = getCellType(r, c);
+    if (current === 'empty') {
+      WALLS.push(here);
+    } else if (current === 'wall') {
+      clearCell(r, c);
+      PITS.push(here);
+    } else if (current === 'pit') {
+      clearCell(r, c);
+      GOAL_HOME = [...GOAL];
+      GOAL = here;
+    } else if (current === 'goal') {
+      if (samePlace(GOAL_HOME, here) || samePlace(GOAL_HOME, START)) {
+        setStatus(`<strong>The goal has to be somewhere.</strong> To move it, keep clicking another cell until it becomes the goal.`);
+        return;
+      }
+      START_HOME = [...START];
+      START = here;
+      clearCell(GOAL_HOME[0], GOAL_HOME[1]);
+      GOAL = [...GOAL_HOME];
+    } else if (current === 'start') {
+      if (samePlace(START_HOME, here) || samePlace(START_HOME, GOAL)) {
+        setStatus(`<strong>The robot needs a start square.</strong> To move it, keep clicking another cell until it becomes the start.`);
+        return;
+      }
+      clearCell(START_HOME[0], START_HOME[1]);
+      START = [...START_HOME];
+    }
+    // Rebuild grid since cell classes change
+    buildGrid();
+    resetQ();
+    episode = 0;
+    totalSteps = 0;
+    lastReward = null;
+    rewardHistory = [];
+    wins = 0;
+    attempts = 0;
+    agent = [...START];
+    document.getElementById('log').innerHTML = '<div>waiting for training...</div>';
+    renderCells();
+    renderAgent();
+    updateStats();
+    setStatus(`<strong>World edited.</strong> Switch back to Train Mode and hit "Train 100 Episodes" to teach the robot this new maze.`);
+  }
+
+  function setMode(mode) {
+    // If training is running and the user wants to edit, cancel training first.
+    if (mode === 'edit' && training) {
+      trainingCancel = true;
+    }
+    editMode = (mode === 'edit');
+    document.body.classList.toggle('edit-mode', editMode);
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    if (editMode) {
+      setStatus(`<strong>Edit Mode.</strong> Click any cell to change it. Each click cycles: empty → wall → pit → goal → start.`);
+    } else {
+      setStatus(`<strong>Train Mode.</strong> Hit "Train 100 Episodes" to teach the robot this maze.`);
+    }
+  }
+
+  // Event listeners
+  document.getElementById('btnTrain').addEventListener('click', () => train(100));
+  document.getElementById('btnStep').addEventListener('click', singleEpisode);
+  document.getElementById('btnReset').addEventListener('click', reset);
+
+  document.getElementById('modeTrain').addEventListener('click', () => setMode('train'));
+  document.getElementById('modeEdit').addEventListener('click', () => setMode('edit'));
+
+  document.getElementById('grid').addEventListener('click', (e) => {
+    if (!editMode) return;
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    const r = parseInt(cell.dataset.r);
+    const c = parseInt(cell.dataset.c);
+    if (isNaN(r) || isNaN(c)) return;
+    cycleCell(r, c);
+  });
+
+  epsSlider.addEventListener('input', (e) => {
+    epsilon = parseInt(e.target.value) / 100;
+    epsVal.textContent = epsilon.toFixed(2);
+  });
+
+  document.getElementById('gamSlider').addEventListener('input', (e) => {
+    GAMMA = parseInt(e.target.value) / 100;
+    document.getElementById('gamVal').textContent = GAMMA.toFixed(2);
+    document.getElementById('sigParams').textContent = `Q-learning · γ = ${GAMMA.toFixed(2)} · α = ${ALPHA}`;
+  });
+
+  document.getElementById('rewGoalSlider').addEventListener('input', (e) => {
+    REWARD_GOAL = parseInt(e.target.value);
+    document.getElementById('rewGoalVal').textContent = `+${REWARD_GOAL}`;
+  });
+
+  document.getElementById('rewPitSlider').addEventListener('input', (e) => {
+    REWARD_PIT = parseInt(e.target.value);
+    const txt = REWARD_PIT === 0 ? '0' : `−${Math.abs(REWARD_PIT)}`;
+    document.getElementById('rewPitVal').textContent = txt;
+  });
+
+  document.getElementById('rewStepSlider').addEventListener('input', (e) => {
+    // Slider goes -100 to 0, we map to -1.0 to 0
+    REWARD_STEP = parseInt(e.target.value) / 100;
+    const v = REWARD_STEP;
+    let txt;
+    if (v === 0) txt = '0.00';
+    else txt = `−${Math.abs(v).toFixed(2)}`;
+    document.getElementById('rewStepVal').textContent = txt;
+  });
+
+  spdSlider.addEventListener('input', (e) => {
+    const v = parseInt(e.target.value);
+    if (v < 30) spdVal.textContent = 'Slow';
+    else if (v < 70) spdVal.textContent = 'Medium';
+    else spdVal.textContent = 'Fast';
+  });
+
+  // Initialize
+  resetQ();
+  buildGrid();
+  renderCells();
+  renderAgent();
+  updateStats();
+</script>
+</body>
+</html>
