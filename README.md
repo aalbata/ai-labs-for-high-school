@@ -31,6 +31,14 @@ The labs work best in this order. The opening demo takes about 15 minutes and ea
 | Sensor data and anomaly detection | How a short algorithm can spot a failing machine in its sensor readings, how to balance false alarms against missed failures, and why several sensors work better than one. | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aalbata/ai-labs-for-high-school/blob/main/notebooks/sensor_anomaly_detection.ipynb) | [Student guide](guides/sensor_anomaly_student_guide.pdf) |
 | Grid World (reinforcement learning) | How a robot learns from rewards and penalties instead of from labeled examples, and how the settings and the rewards you choose change what it learns. | [Open the demo](https://aalbata.github.io/ai-labs-for-high-school/demos/grid_world.html) | [Worksheet](guides/grid_world_student_worksheet.pdf) |
 
+## بالعربية
+
+مختبر عالم الشبكة متاح باللغة العربية. يعمل في المتصفح على الهاتف أو الحاسوب، دون تثبيت أو حساب أو تكلفة.
+
+[افتح المختبر](https://aalbata.github.io/ai-labs-for-high-school/demos/grid_world_ar.html) · [ورقة العمل](guides/grid_world_student_worksheet_ar.pdf)
+
+Grid World is available in Arabic, with an Arabic student worksheet.
+
 ## How to start
 
 1. For the two Colab labs, click the Open in Colab badge. Google Colab is free; you only need a Google account.
