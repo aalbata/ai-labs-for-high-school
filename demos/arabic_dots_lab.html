@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لغز النقاط · الذكاء الاصطناعي بالتجربة لطلاب المرحلة الثانوية</title>
+<meta name="description" content="مختبر عربي يعمل داخل المتصفح: يعلّم الطلاب نموذجًا لغويًا صغيرًا إعادة النقاط إلى النص العربي.">
+<style>
+  :root {
+    --ink: #222;
+    --muted: #666;
+    --line: #d0d4d9;
+    --panel: #f6f7f9;
+    --accent: #1f5f99;
+    --accent-dark: #174a78;
+    --good: #2e7d32;
+    --bad: #b71c1c;
+    --parch: #fbf6ea;
+    --parch-line: #e6dcc4;
+    --he: #6f4bd8;
+    --she: #c26a00;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: #fff; color: var(--ink);
+    font-family: "Segoe UI", Tahoma, "Geeza Pro", "Noto Sans Arabic", system-ui, sans-serif;
+    font-size: 18px; line-height: 1.85; padding: 20px 16px 48px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  a { color: var(--accent); }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 22px; }
+  .kicker { font-size: 14px; color: var(--muted); }
+  .title { font-size: clamp(36px, 8vw, 48px); font-weight: 700; line-height: 1.5; }
+  .byline { font-size: 14px; color: var(--muted); }
+  .byline .name { color: var(--ink); font-weight: 600; }
+  .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+  .where { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+  .trail { display: flex; gap: 8px; list-style: none; }
+  .trail li { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--accent); background: #fff; }
+  .trail li.done { background: #a9c5de; border-color: #a9c5de; }
+  .trail li.on { background: var(--accent); }
+  h2 { font-size: 27px; line-height: 1.5; margin-bottom: 10px; outline: none; }
+  h3 { font-size: 21px; line-height: 1.5; margin: 26px 0 6px; }
+  section p { margin-bottom: 12px; }
+  .muted { color: var(--muted); font-size: 16px; }
+  .sheet {
+    background: var(--parch); border: 1px solid var(--parch-line); border-radius: 10px;
+    padding: 12px 16px; margin: 14px 0;
+  }
+  .sheet .label { font-size: 14px; color: var(--muted); }
+  .sheet.machine { background: #fff; border-color: var(--line); }
+  .script { font-size: clamp(27px, 6.4vw, 38px); line-height: 2; margin: 0; word-spacing: 0.08em; }
+  .script-m { font-size: clamp(22px, 5vw, 27px); line-height: 2; margin: 0; }
+  .hero { text-align: center; }
+  .huge { font-size: clamp(76px, 20vw, 120px); line-height: 1.45; margin: 0; }
+  button {
+    font: inherit; font-size: 17px; padding: 9px 18px; min-height: 46px; border: 1px solid #aab1b8;
+    border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #eef1f4; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-dark); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+  .choice { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-top: 18px; background: var(--panel); }
+  .choice strong { display: block; font-size: 20px; margin-bottom: 8px; }
+  .choice button { min-width: 130px; }
+  .note { font-size: 15px; color: var(--muted); margin-top: 10px; }
+  .target { color: var(--accent); background: #e8f0f8; border-radius: 8px; padding: 0 10px; }
+  .target.solved { color: var(--good); background: #e6f3e7; }
+  .puzzle { padding: 10px 0 14px; border-bottom: 1px solid var(--line); }
+  .puzzle:last-child { border-bottom: none; }
+  .options { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .options button { min-width: 84px; font-size: 21px; }
+  .options button.right { background: #e6f3e7; border-color: var(--good); color: var(--good); opacity: 1; }
+  .options button.wrong { background: #fdecec; border-color: var(--bad); color: var(--bad); }
+  .takeaway {
+    border-inline-start: 5px solid var(--accent); background: #eef4fa; border-radius: 6px;
+    padding: 12px 16px; margin: 18px 0; animation: rise .3s ease;
+  }
+  .takeaway p { margin-bottom: 6px; }
+  .takeaway p:last-child { margin-bottom: 0; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .takeaway { animation: none; } }
+  .w {
+    font: inherit; border: none; background: none; padding: 0 3px; min-height: 0; border-radius: 6px; cursor: pointer;
+    line-height: inherit;
+  }
+  .w:hover { background: #eef1f4 !important; }
+  .w.ok { color: var(--good); }
+  .w.no { color: var(--bad); border-bottom: 3px dotted var(--bad); }
+  .w.sel { background: #fff3cd !important; }
+  .key { font-size: 15px; color: var(--muted); }
+  .key .k-ok { color: var(--good); font-weight: 600; }
+  .key .k-no { color: var(--bad); font-weight: 600; border-bottom: 2px dotted var(--bad); }
+  .result-row { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; align-items: end; margin: 14px 0; }
+  @media (max-width: 560px) { .result-row { grid-template-columns: 1fr; } }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--panel); }
+  .tile .big { font-size: 46px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
+  .tile .cap { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .tile .count { font-size: 15px; margin-top: 4px; }
+  .curve { display: flex; align-items: flex-end; gap: 10px; height: 150px; border-bottom: 1px solid var(--line); padding-top: 22px; }
+  .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+  .bar { width: 100%; max-width: 34px; background: #a9c5de; border-radius: 4px 4px 0 0; transition: height .3s ease; }
+  .col.now .bar { background: var(--accent); }
+  .col .val { position: absolute; font-size: 13px; color: var(--ink); font-weight: 600; transform: translateY(-100%); }
+  .xlab { display: flex; gap: 10px; font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .xlab span { flex: 1; text-align: center; font-variant-numeric: tabular-nums; }
+  .axis-note { font-size: 13px; color: var(--muted); text-align: center; }
+  .why { border: 1px solid #e8d48a; background: #fffbea; border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  .why h4 { font-size: 19px; margin-bottom: 4px; }
+  .why ul { list-style: none; margin-top: 4px; }
+  .why li { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 4px 0; border-top: 1px solid #efe3b4; }
+  .why li b { font-size: 21px; min-width: 70px; }
+  .why small { font-size: 14px; color: var(--muted); }
+  .libs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+  .libs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .libs small { display: block; font-size: 13px; opacity: .8; font-weight: 400; line-height: 1.3; }
+  .phrase { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2px 12px; padding: 6px 0; border-bottom: 1px solid var(--parch-line); }
+  .phrase:last-child { border-bottom: none; }
+  .conf { font-size: 15px; color: var(--muted); }
+  .guess { color: #8a5a00; }
+  .nowrap { white-space: nowrap; }
+  .sheet.rows4 { margin: 8px 0; padding: 4px 14px; }
+  .rows4 .script-m { font-size: clamp(20px, 4.6vw, 25px); line-height: 1.7; }
+  .row4 { padding: 6px 0 8px; border-bottom: 1px solid var(--line); }
+  .row4:last-child { border-bottom: none; }
+  .row4 mark { background: #fff3cd; border-radius: 6px; padding: 0 6px; color: inherit; }
+  .verdict { font-size: 16px; font-weight: 600; margin-inline-start: 8px; white-space: nowrap; }
+  .verdict.yes { color: var(--good); }
+  .verdict.non { color: var(--bad); }
+  .split { display: flex; gap: 2px; height: 12px; margin-top: 2px; }
+  .seg { min-width: 4px; transition: flex-grow .25s ease; }
+  .seg.he { background: var(--he); border-radius: 0 4px 4px 0; }
+  .seg.she { background: var(--she); border-radius: 4px 0 0 4px; }
+  .splitlab { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink); }
+  .splitlab i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-inline-end: 5px; }
+  .slider { margin: 14px 0; }
+  .slider label { display: flex; justify-content: space-between; gap: 12px; font-size: 16px; }
+  .slider b { font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; height: 34px; accent-color: var(--accent); }
+  textarea {
+    font: inherit; font-size: 21px; width: 100%; padding: 10px 12px; border: 1px solid #aab1b8;
+    border-radius: 8px; resize: vertical; line-height: 1.7;
+  }
+  .chips { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .chips button { text-align: start; font-size: 16px; min-height: 42px; }
+  .alert { border: 1px solid #f0b4b4; background: #fdecec; border-radius: 8px; padding: 8px 14px; margin: 10px 0; }
+  .mission { display: flex; gap: 10px; padding: 7px 0; font-size: 17px; border-bottom: 1px solid #e3e6ea; }
+  .mission:last-child { border-bottom: none; }
+  .check { width: 20px; height: 20px; flex-shrink: 0; margin-top: 7px; border: 1px solid #888; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .mission.done .check { background: var(--good); border-color: var(--good); color: #fff; }
+  .mission.done .check::after { content: '\2713'; }
+  .mission.done span:last-child { color: var(--muted); }
+  .panel { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; background: var(--panel); margin: 16px 0; }
+  .panel h3 { margin-top: 0; font-size: 18px; }
+  .cards { display: grid; gap: 12px; margin: 14px 0; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .card h4 { font-size: 20px; }
+  .card p { margin: 0; }
+  section ol.qs { padding-inline-start: 24px; }
+  section ol.qs li { margin-bottom: 8px; }
+  dl.gloss { display: grid; grid-template-columns: 150px 1fr; gap: 6px 18px; font-size: 16px; }
+  dl.gloss dt { font-weight: 600; }
+  @media (max-width: 600px) { dl.gloss { grid-template-columns: 1fr; gap: 0; } dl.gloss dt { margin-top: 8px; } }
+  details { border-top: 1px solid var(--line); padding: 10px 0; font-size: 16px; }
+  details summary { cursor: pointer; font-weight: 600; }
+  details ul { padding-inline-start: 22px; margin-top: 6px; }
+  .nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+  .sig { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">الذكاء الاصطناعي بالتجربة لطلاب المرحلة الثانوية، الصفوف 9 إلى 12</div>
+    <h1 class="title" id="title" aria-label="لغز النقاط">لعر الٮڡاط</h1>
+    <div class="byline"><span class="name">د. علي البطاينة</span> · كليات التقنية العليا · <span class="ltr">aalbataineh@hct.ac.ae</span></div>
+    <div class="where" id="where" hidden>
+      <ol class="trail" id="trail" aria-hidden="true"></ol>
+      <span id="whereText"></span>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="step" id="s0">
+      <h2 tabindex="-1">هل تستطيع آلة أن تقرأ ما حُذفت نقاطه؟</h2>
+      <div class="sheet hero">
+        <p class="huge" aria-label="ثلاثة حروف بلا نقاط">ٮٮٮ</p>
+        <p class="muted">بيت؟ بنت؟ نبت؟ الشكل واحد، والنقاط وحدها تفرّق بينها.</p>
+      </div>
+      <p>في بدايات الكتابة العربية لم تكن النقاط توضع على الحروف دائمًا، فكان القارئ يعرف الحرف من الكلمات التي حوله.</p>
+      <p>خطة هذا المختبر قصيرة: قراءة جمل بلا نقاط، ثم تعليم آلة أن تعيد النقاط إليها، ثم اكتشاف متى تخطئ ولماذا.</p>
+      <p class="muted">لا حاجة إلى برمجة أو تثبيت. كل شيء يعمل داخل هذه الصفحة، ولا يغادر ما يُكتب فيها هذا الجهاز. المدة المتوقعة من 20 إلى 30 دقيقة.</p>
+      <div class="choice">
+        <strong>قبل أن نبدأ، كيف نخاطبك؟</strong>
+        <div class="actions">
+          <button class="primary" data-gender="0">أنا طالب</button>
+          <button class="primary" data-gender="1">أنا طالبة</button>
+        </div>
+        <p class="note">في العربية لا بد أن تختار الجملة بين المذكر والمؤنث، ولهذا سألناك. سنعود إلى هذه النقطة لاحقًا.</p>
+      </div>
+    </section>
+
+    <section class="step" id="s1" hidden>
+      <h2 tabindex="-1">{هل تستطيع|هل تستطيعين} القراءة بلا نقاط؟</h2>
+      <p>حُذفت من هذه الجملة كل النقاط. {حاول|حاولي} أن {تقرأها|تقرئيها}.</p>
+      <div class="sheet"><p class="script" id="firstShape"></p></div>
+      <div class="actions"><button id="btnReveal">{أظهر|أظهري} النقاط</button></div>
+      <div class="sheet" id="firstDots" hidden><p class="script" id="firstText"></p></div>
+
+      <h3>شكل واحد وثلاث كلمات</h3>
+      <p>في كل جملة كلمة بلا نقاط، وللكلمات الثلاث الشكل نفسه تمامًا. {اختر|اختاري} القراءة الصحيحة.</p>
+      <div id="puzzles"></div>
+      <div class="takeaway" id="t1" hidden>
+        <p>الشكل واحد، لكنك {عرفتَ|عرفتِ} الكلمة الصحيحة في كل مرة من الكلمات المحيطة بها. هذا هو <strong>السياق</strong>، وهو ما سنعلّمه الآن للآلة.</p>
+      </div>
+      <div class="nav"><button data-go="0">السابق</button><button class="primary" data-go="2">التالي</button></div>
+    </section>
+
+    <section class="step" id="s2" hidden>
+      <h2 tabindex="-1">آلة لم تقرأ شيئًا</h2>
+      <p>هذه آلة جديدة لم تقرأ جملة واحدة. {انظر|انظري} كيف تضع النقاط على هذه الجملة، ثم {أعطها|أعطيها} نصوصًا {وشاهد|وشاهدي} ما يحدث.</p>
+      <div class="sheet"><div class="label">الجملة بلا نقاط</div><p class="script" id="demoShape"></p></div>
+      <div class="sheet machine"><div class="label">قراءة الآلة</div><p class="script" id="demoReading"></p>
+        <div class="key"><span class="k-ok">أخضر</span>: كلمة صحيحة · <span class="k-no">أحمر</span>: كلمة خاطئة · {اضغط|اضغطي} على أي كلمة {لتعرف|لتعرفي} لماذا اختارتها الآلة</div>
+      </div>
+      <div class="why" id="why2" hidden aria-live="polite"></div>
+      <div class="actions">
+        <button class="primary" id="btnMore">{أعطها|أعطيها} المزيد لتقرأه</button>
+        <button id="btnZero">{ابدأ|ابدئي} من الصفر</button>
+      </div>
+      <div class="result-row">
+        <div class="tile">
+          <div class="big"><bdi dir="ltr" id="scoreBig">0%</bdi></div>
+          <div class="cap">نسبة الكلمات الصحيحة في <span id="testInfo"></span> لم تقرأها الآلة</div>
+          <div class="count">الجمل المقروءة: <b id="readCount">0</b></div>
+        </div>
+        <div>
+          <div class="curve" id="curve" role="img" aria-label="نسبة الكلمات الصحيحة تزداد كلما قرأت الآلة جملًا أكثر"></div>
+          <div class="xlab" id="xlab"></div>
+          <div class="axis-note">عدد الجمل المقروءة</div>
+        </div>
+      </div>
+      <div class="takeaway" id="t2" hidden>
+        <p>لم يكتب لها أحد قواعد اللغة. كل ما تفعله أنها تعدّ: كم مرة قرأت كل كلمة، وأي الكلمات تأتي بجانب أي الكلمات. ونحن نختبرها على جمل لم تقرأها حتى نعرف أتعلمت أم حفظت فقط.</p>
+        <p>{اقرأ|اقرئي} الجملة التي قرأتها الآلة مرة أخرى: إنها تصف ما {رأيتَه|رأيتِه} للتو.</p>
+      </div>
+      <div class="nav"><button data-go="1">السابق</button><button class="primary" data-go="3">التالي</button></div>
+    </section>
+
+    <section class="step" id="s3" hidden>
+      <h2 tabindex="-1">ماذا قرأت الآلة؟</h2>
+      <p>في الجمل التالية كلمة بلا نقاط. {اختر|اختاري} مكتبة واحدة لتقرأها الآلة وحدها، {ولاحظ|ولاحظي} كيف تتغير قراءتها. الجمل نفسها لن تتغير.</p>
+      <div class="libs" id="libs"></div>
+      <div class="sheet" id="phrases"></div>
+      <p class="muted" id="libNote"></p>
+      <div class="takeaway" id="t3" hidden>
+        <p>الجملة لم تتغير، والآلة لم تتغير. الذي تغيّر هو ما قرأته. لهذا {اسأل|اسألي} عن أي نظام ذكاء اصطناعي: ماذا قرأ؟</p>
+      </div>
+      <div class="nav"><button data-go="2">السابق</button><button class="primary" data-go="4">التالي</button></div>
+    </section>
+
+    <section class="step" id="s4" hidden>
+      <h2 tabindex="-1">نقطتان تغيّران كل شيء</h2>
+      <p>في «يدرس» نقطتان تحت الحرف الأول، وفي «تدرس» نقطتان فوقه. وحين تُحذف النقاط تصبح الكلمتان «ٮدرس»، وعلى الآلة أن تختار: هو أم هي؟</p>
+      <p>قرأت الآلة هذه المرة مكتبة صغيرة صنعناها عمدًا غير متوازنة، حتى تظهر الفكرة بوضوح: 10 جمل عن طلاب الهندسة وجملتان عن طالباتها، و10 جمل عن طالبات التمريض وجملتان عن طلابه.</p>
+      <div class="sheet machine rows4" id="rows4a"></div>
+      <div class="slider">
+        <label for="addSlider"><span>{أضف|أضيفي} جملًا عن طالبات الهندسة وطلاب التمريض</span><span class="nowrap">الجمل المضافة: <b id="addCount">0</b></span></label>
+        <input type="range" id="addSlider" min="0" max="24" step="2" value="0">
+      </div>
+      <div class="sheet machine rows4" id="rows4b"></div>
+      <p>ليلى اسم فتاة وسعيد اسم فتى. {أنتَ تعرف|أنتِ تعرفين} ذلك دون أي تدريب، أما الآلة فلا تعرف إلا ما قرأته.</p>
+      <p class="muted">{حرّك|حرّكي} المؤشر {ولاحظ|ولاحظي}: هل يمكن أن تكون جملتا ليلى وسعيد صحيحتين معًا؟</p>
+      <div class="actions"><button class="primary" id="btnNames">{علّمها|علّميها} الاسمين</button></div>
+      <p class="muted" id="namesNote" hidden>قرأت الآلة جملة عن ليلى وجملة عن سعيد.</p>
+      <div class="takeaway" id="t4" hidden>
+        <p>لم تقرر الآلة من يدرس الهندسة. لقد كررت ما قرأته، وعندما تغيّر ما قرأته تغيّر جوابها. لهذا تهمّنا النصوص التي تتدرب عليها أنظمة الذكاء الاصطناعي، ويهمّنا من يختارها.</p>
+        <p>في بداية المختبر سألناك كيف نخاطبك. الآلة لم تسأل أحدًا.</p>
+      </div>
+      <div class="nav"><button data-go="3">السابق</button><button class="primary" data-go="5">التالي</button></div>
+    </section>
+
+    <section class="step" id="s5" hidden>
+      <h2 tabindex="-1">{تحدَّ|تحدَّي} الآلة</h2>
+      <p>قرأت الآلة الآن كل المكتبات: <span id="allCount"></span> جملة. {اكتب|اكتبي} جملة عربية، وسنحذف نقاطها ونعطيها للآلة.</p>
+      <textarea id="userText" rows="2" dir="rtl" aria-label="جملتك"></textarea>
+      <div class="actions"><button class="primary" id="btnTry">{احذف|احذفي} النقاط {واختبر|واختبري} الآلة</button></div>
+      <p class="muted" id="tryNone" hidden>لم نجد كلمات عربية. {اكتب|اكتبي} جملة بالعربية ثم {حاول|حاولي} مرة أخرى.</p>
+      <div class="chips" id="chips"></div>
+      <div id="tryOut" hidden>
+        <div class="sheet"><div class="label">الجملة بلا نقاط</div><p class="script-m" id="tryShape"></p></div>
+        <div class="sheet machine"><div class="label">قراءة الآلة</div><p class="script-m" id="tryReading"></p>
+          <div class="key" id="tryScore"></div></div>
+        <div class="why" id="why5" hidden aria-live="polite"></div>
+        <div class="alert" id="tryAlert" hidden></div>
+        <div class="actions"><button id="btnTeach">{علّمها|علّميها} هذه الجملة</button></div>
+        <p class="muted" id="teachNote" hidden></p>
+      </div>
+      <div class="panel">
+        <h3>المهام</h3>
+        <div class="mission" id="m1"><span class="check"></span><span>جملة تقرؤها الآلة كلها صحيحة.</span></div>
+        <div class="mission" id="m2"><span class="check"></span><span>خطأ قالته الآلة بثقة أكبر من <bdi dir="ltr">70%</bdi>.</span></div>
+        <div class="mission" id="m3"><span class="check"></span><span>جملة أخطأت فيها الآلة ثم قرأتها صحيحة بعد أن {علّمتَها|علّمتِها}.</span></div>
+      </div>
+      <div class="nav"><button data-go="4">السابق</button><button class="primary" data-go="6">التالي</button></div>
+    </section>
+
+    <section class="step" id="s6" hidden>
+      <h2 tabindex="-1">ماذا {اكتشفتَ|اكتشفتِ}؟</h2>
+      <div class="cards">
+        <div class="card"><h4>الآلة تعدّ ولا تفهم</h4><p>اختارت الكلمات لأنها عدّت ما قرأته، لا لأنها عرفت معناها. وليلى عندها مجرد كلمة.</p></div>
+        <div class="card"><h4>ما تقرؤه الآلة يحدد ما تقوله</h4><p>غيّرنا المكتبة فتغيّرت القراءة، وغيّرنا توازن الجمل فتغيّر «هو» و«هي».</p></div>
+        <div class="card"><h4>الثقة ليست صوابًا</h4><p>قد تعطي الآلة نسبة عالية وتخطئ. النسبة تصف ما قرأته، لا ما هو صحيح.</p></div>
+      </div>
+      <p>وماذا عن أنظمة الدردشة؟ هي أكبر بكثير من آلتنا، وتستخدم شبكات عصبية، وتتدرب على كميات هائلة من النصوص. لكن فكرتها الأساسية قريبة مما رأيناه هنا: توقّع الكلمة من سياقها. ولذلك قد تخطئ بثقة، وقد تكرر أنماطًا موجودة في النصوص التي تدربت عليها.</p>
+      <h3>أسئلة للنقاش</h3>
+      <ol class="qs">
+        <li>إذا طُلب بناء آلة لقراءة النصوص الطبية، فماذا يجب أن تقرأ؟ وماذا سيحدث لو قرأت نصوص الرياضة فقط؟</li>
+        <li>من يجب أن يقرر ما تقرؤه أنظمة الذكاء الاصطناعي؟</li>
+        <li>متى لا يكفي أن نعتمد على نسبة الثقة التي تعطيها الآلة؟</li>
+      </ol>
+      <h3>مصطلحات</h3>
+      <dl class="gloss">
+        <dt>السياق</dt><dd>الكلمات المحيطة بكلمة ما، وهي التي تساعد على فهمها.</dd>
+        <dt>النموذج اللغوي</dt><dd>برنامج يقدّر الكلمة الأرجح اعتمادًا على النصوص التي قرأها.</dd>
+        <dt>بيانات التدريب</dt><dd>النصوص التي يقرؤها النموذج ليتعلم منها.</dd>
+        <dt>بيانات الاختبار</dt><dd>نصوص لم يقرأها النموذج، نستخدمها لقياس ما تعلمه.</dd>
+        <dt>الثقة</dt><dd>النسبة التي يعطيها النموذج لاختياره، وهي ليست دليلًا على صحته.</dd>
+        <dt>التحيّز</dt><dd>ميل النموذج إلى نتيجة معينة بسبب اختلال في ما قرأه.</dd>
+      </dl>
+      <details>
+        <summary>كيف تعمل آلتنا؟</summary>
+        <p>تعدّ الآلة كل كلمة وكل كلمتين متجاورتين. ولكل كلمة بلا نقاط تجمع الكلمات التي قرأتها بالشكل نفسه، ثم تحسب أرجحها باستخدام الكلمات قبلها وبعدها. وإذا لم تجد الشكل في ما قرأته، خمّنت الحروف مما تعرفه عن كل ثلاثة حروف متتالية.</p>
+      </details>
+      <details>
+        <summary>للمعلمين والمعلمات</summary>
+        <ul>
+          <li>يناسب المختبر حصة حاسوب أو حصة لغة عربية، ويعمل على الهاتف والحاسوب.</li>
+          <li>اقتراح لحصة من 30 دقيقة: المرحلتان 1 و2 (10 دقائق)، المرحلتان 3 و4 (10 دقائق)، التحدي والنقاش (10 دقائق).</li>
+          <li>كُتبت جمل هذا المختبر خصيصًا له، والدرجات تقيس أداء الآلة على جمل من النوع نفسه فقط، فلا تصلح للتعميم على النصوص العربية كلها.</li>
+          <li>المكتبة غير المتوازنة في المرحلة 4 مصنوعة عمدًا للتوضيح، وليست إحصاءً عن طلاب الهندسة أو التمريض.</li>
+        </ul>
+      </details>
+      <h3>روابط</h3>
+      <p>ورقة العمل: <a href="../guides/arabic_dots_lab_worksheet_ar.pdf">PDF</a> · <a href="../guides/arabic_dots_lab_worksheet_ar.docx">Word</a><br>
+      مختبر آخر: <a href="grid_world_ar.html">عالم الشبكة</a><br>
+      كل مختبرات المقرر: <a class="ltr" href="https://aalbata.github.io/ai-labs-for-high-school/">Hands-On AI for High School</a></p>
+      <div class="nav"><button data-go="5">السابق</button><button id="btnRestart">{ابدأ|ابدئي} من جديد</button></div>
+    </section>
+
+  </main>
+
+  <details lang="en" dir="ltr">
+    <summary>About this lab (English)</summary>
+    <p>This lab is written in Arabic because its subject is the Arabic script. Many Arabic letters differ only by their dots, and early Arabic writing often omitted them. Students read text with the dots removed, then teach a small statistical language model, running entirely in the browser, to restore them. They see how the model improves as it reads, how its answers change with what it has read, and how the two dots that separate "he studies" (يدرس) from "she studies" (تدرس) expose bias in an unbalanced collection of sentences. All sentences were written for this lab. The unbalanced collection was built deliberately and is not a statistic about real students.</p>
+  </details>
+
+  <div class="sig">د. علي البطاينة · كليات التقنية العليا · نموذج لغوي صغير يعمل كله داخل المتصفح</div>
+</div>
+
+<script>
+// A small language model for restoring the dots of Arabic text.
+// It counts words, pairs of neighbouring words and runs of three letters,
+// and uses those counts to choose the most likely reading of each dotless word.
+
+const START = '<s>', END = '</s>';
+const PAIR_WEIGHT = 0.8, WORD_WEIGHT = 0.19, UNSEEN_WEIGHT = 0.0002;
+
+const MARKS = /[ً-ٰٟـ]/g;
+const NOT_LETTER = /[^ء-غف-ي]+/;
+
+// Dotless shape of each letter, and the shapes that apply only at the end of a word.
+const SHAPE = {
+  'ب': 'ٮ', 'ت': 'ٮ', 'ث': 'ٮ', 'ن': 'ٮ', 'ي': 'ٮ', 'ئ': 'ٮ',
+  'ج': 'ح', 'خ': 'ح', 'ذ': 'د', 'ز': 'ر', 'ش': 'س', 'ض': 'ص', 'ظ': 'ط', 'غ': 'ع',
+  'ف': 'ڡ', 'ق': 'ڡ', 'ة': 'ه', 'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ؤ': 'و'
+};
+const FINAL_SHAPE = { 'ن': 'ں', 'ي': 'ى', 'ئ': 'ى', 'ق': 'ٯ' };
+
+function normalize(text) {
+  return text.replace(MARKS, '').replace(/ک/g, 'ك').replace(/ی/g, 'ي').replace(/ٱ/g, 'ا');
+}
+
+function tokenize(text) {
+  return normalize(text).split(NOT_LETTER).filter(Boolean);
+}
+
+function shapeOf(word) {
+  let out = '';
+  for (let i = 0; i < word.length; i++) {
+    const c = word[i];
+    out += (i === word.length - 1 && FINAL_SHAPE[c]) || SHAPE[c] || c;
+  }
+  return out;
+}
+
+function lettersFor(ch, isLast) {
+  switch (ch) {
+    case 'ٮ': return isLast ? ['ب', 'ت', 'ث'] : ['ب', 'ت', 'ث', 'ن', 'ي', 'ئ'];
+    case 'ں': return ['ن'];
+    case 'ى': return ['ي', 'ى', 'ئ'];
+    case 'ٯ': return ['ق'];
+    case 'ڡ': return isLast ? ['ف'] : ['ف', 'ق'];
+    case 'ح': return ['ج', 'ح', 'خ'];
+    case 'د': return ['د', 'ذ'];
+    case 'ر': return ['ر', 'ز'];
+    case 'س': return ['س', 'ش'];
+    case 'ص': return ['ص', 'ض'];
+    case 'ط': return ['ط', 'ظ'];
+    case 'ع': return ['ع', 'غ'];
+    case 'ه': return isLast ? ['ه', 'ة'] : ['ه'];
+    case 'ا': return ['ا', 'أ', 'إ', 'آ'];
+    case 'و': return ['و', 'ؤ'];
+    default: return [ch];
+  }
+}
+
+// Repeatable random numbers, so that every class sees the same reading order.
+function randomMaker(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randomReading(shape, rand) {
+  let out = '';
+  for (let i = 0; i < shape.length; i++) {
+    const opts = lettersFor(shape[i], i === shape.length - 1);
+    out += opts[Math.floor(rand() * opts.length)];
+  }
+  return out;
+}
+
+function add(map, key, n) { map.set(key, (map.get(key) || 0) + n); }
+
+// Rescales a row of chances to sum to one; an all-zero row becomes even.
+function scaled(row) {
+  const total = row.reduce((a, b) => a + b, 0);
+  return total ? row.map(v => v / total) : row.map(() => 1 / row.length);
+}
+
+class Reader {
+  constructor() {
+    this.words = new Map();
+    this.pairs = new Map();
+    this.forms = new Map();
+    this.total = 0;
+    this.sentences = 0;
+    this.tri = new Map(); this.triBase = new Map();
+    this.bi = new Map(); this.biBase = new Map();
+    this.uni = new Map(); this.letters = 0;
+  }
+
+  read(sentence, times) {
+    const n = times || 1;
+    const tokens = tokenize(sentence);
+    if (!tokens.length) return;
+    this.sentences += n;
+    add(this.words, START, n);
+    let prev = START;
+    for (const w of tokens) {
+      add(this.words, w, n);
+      add(this.pairs, prev + ' ' + w, n);
+      this.total += n;
+      const s = shapeOf(w);
+      if (!this.forms.has(s)) this.forms.set(s, new Set());
+      this.forms.get(s).add(w);
+      this.learnLetters(w, n);
+      prev = w;
+    }
+    add(this.words, END, n);
+    add(this.pairs, prev + ' ' + END, n);
+  }
+
+  learnLetters(word, n) {
+    let a = '^', b = '^';
+    for (const c of word + '$') {
+      add(this.tri, a + b + c, n); add(this.triBase, a + b, n);
+      add(this.bi, b + c, n); add(this.biBase, b, n);
+      add(this.uni, c, n); this.letters += n;
+      a = b; b = c;
+    }
+  }
+
+  letterChance(a, b, c) {
+    const t = this.triBase.get(a + b) ? (this.tri.get(a + b + c) || 0) / this.triBase.get(a + b) : 0;
+    const d = this.biBase.get(b) ? (this.bi.get(b + c) || 0) / this.biBase.get(b) : 0;
+    const u = this.letters ? (this.uni.get(c) || 0) / this.letters : 0;
+    return 0.6 * t + 0.3 * d + 0.09 * u + 0.01 / 40;
+  }
+
+  // Best spelling for a shape the model has never read, and how sure it is of that spelling.
+  guess(shape) {
+    let layer = new Map([['^^', { best: 1, sum: 1, text: '' }]]);
+    for (let i = 0; i <= shape.length; i++) {
+      const opts = i < shape.length ? lettersFor(shape[i], i === shape.length - 1) : ['$'];
+      const next = new Map();
+      layer.forEach((st, key) => {
+        opts.forEach(c => {
+          const p = this.letterChance(key[0], key[1], c);
+          const k = key[1] + c;
+          let e = next.get(k);
+          if (!e) { e = { best: 0, sum: 0, text: '' }; next.set(k, e); }
+          e.sum += st.sum * p;
+          if (st.best * p > e.best) { e.best = st.best * p; e.text = st.text + (c === '$' ? '' : c); }
+        });
+      });
+      layer = next;
+    }
+    let top = null, sum = 0;
+    layer.forEach(e => { sum += e.sum; if (!top || e.best > top.best) top = e; });
+    return { word: top.text, sure: sum ? top.best / sum : 0 };
+  }
+
+  chance(prev, cand) {
+    const before = this.words.get(prev) || 0;
+    const pair = before ? (this.pairs.get(prev + ' ' + cand.word) || 0) / before : 0;
+    const single = this.total ? (this.words.get(cand.word) || 0) / this.total : 0;
+    return PAIR_WEIGHT * pair + WORD_WEIGHT * single + (cand.known ? 0 : UNSEEN_WEIGHT * cand.sure);
+  }
+
+  candidates(item) {
+    if (item.fixed) return [{ word: item.fixed, known: true, sure: 1 }];
+    const seen = this.forms.has(item.shape) ? [...this.forms.get(item.shape)] : [];
+    const out = seen.map(w => ({ word: w, known: true, sure: 1 }));
+    const g = this.guess(item.shape);
+    if (!seen.includes(g.word)) out.push({ word: g.word, known: false, sure: g.sure });
+    return out;
+  }
+
+  // Reads a list of items, each either { shape } or { fixed }, using every word on both sides.
+  decode(items) {
+    const cands = items.map(it => this.candidates(it));
+    const n = cands.length;
+    const fwd = [];
+    for (let i = 0; i < n; i++) {
+      const row = cands[i].map(c => i === 0
+        ? this.chance(START, c)
+        : cands[i - 1].reduce((s, p, j) => s + fwd[i - 1][j] * this.chance(p.word, c), 0));
+      fwd.push(scaled(row));
+    }
+    const back = new Array(n);
+    for (let i = n - 1; i >= 0; i--) {
+      const row = cands[i].map((c, k) => i === n - 1
+        ? this.chance(c.word, { word: END, known: true, sure: 1 })
+        : cands[i + 1].reduce((s, x, j) => s + this.chance(c.word, x) * back[i + 1][j], 0));
+      back[i] = scaled(row);
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const joint = cands[i].map((c, k) => fwd[i][k] * back[i][k]);
+      const total = joint.reduce((a, b) => a + b, 0) || 1;
+      const options = cands[i]
+        .map((c, k) => ({ word: c.word, known: c.known, share: (joint[k] / total) * (c.known ? 1 : c.sure) }))
+        .sort((a, b) => b.share - a.share);
+      out.push({ shape: items[i].shape || null, fixed: items[i].fixed || null, word: options[0].word, share: options[0].share, known: options[0].known, options });
+    }
+    return out;
+  }
+
+  readSentence(text) {
+    const tokens = tokenize(text);
+    return { tokens, reading: this.decode(tokens.map(t => ({ shape: shapeOf(t) }))) };
+  }
+
+  seen(word) { return this.words.get(word) || 0; }
+  seenPair(a, b) { return this.pairs.get(a + ' ' + b) || 0; }
+}
+
+function makeReader(sentences) {
+  const r = new Reader();
+  sentences.forEach(s => r.read(s));
+  return r;
+}
+
+function scoreOn(reader, sentences) {
+  let right = 0, all = 0;
+  sentences.forEach(s => {
+    const { tokens, reading } = reader.readSentence(s);
+    tokens.forEach((t, i) => { all++; if (reading[i].word === t) right++; });
+  });
+  return { right, all, percent: all ? 100 * right / all : 0 };
+}
+
+function shuffled(list, seed) {
+  const rand = randomMaker(seed), a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+</script>
+<script>
+const LIB = {"home":["خبزت أمي الخبز في الصباح","رائحة الخبز تملأ البيت كله","اشترى أبي خبزا طازجا من المخبز","هذا خبز جديد من الفرن","وضعت أختي الخبز على المائدة","أكلنا الخبز مع الجبن والزيتون","الخبز الساخن لذيذ جدا","هذا خبز لذيذ صنعته جدتي","البيت نظيف وجميل","يسكن جدي في بيت قديم","هذا بيت صغير قرب السوق","بيت الجيران له حديقة جميلة","زرنا بيت خالتي بعد الظهر","عاد أبي إلى البيت مساء","في بيتنا غرفة كبيرة للضيوف","نظف الولد غرفته قبل النوم","فتحت أمي نافذة الغرفة","جلست الأسرة حول المائدة","طبخ أبي الأرز مع الدجاج","يحب أخي الحساء الساخن","شربت كوبا من الماء البارد","غسل أبي الأطباق بعد العشاء","ساعدت البنت أمها في المطبخ","وضع الولد الحليب في الثلاجة","المطبخ نظيف بعد الغداء","تحب أمي القهوة في الصباح","صنع أخي كعكة كبيرة","قطع أخي البصل والطماطم","السكر في العلبة الزرقاء","الملح قليل في هذا الطعام","وضع الجد الشاي على النار","النار هادئة تحت القدر","كان الطعام كثيرا على المائدة","تناولنا الفطور معا في الحديقة","نام الطفل الصغير بعد الغداء","يلعب أخي الصغير في غرفته","قرأت أمي قصة للطفل قبل النوم","كان الأب يعد العشاء للأسرة","جاء خالي إلى بيتنا أمس","ضيوفنا يحبون طعام جدتي","جارتنا امرأة طيبة","لجارنا بنت صغيرة وولدان","بنت الجيران تزورنا كل أسبوع","هذه بنت خالتي الكبيرة","للبيت باب كبير من الخشب","المفتاح على الطاولة قرب الباب","نضع الملابس في الخزانة","غسل أخي الملابس في الصباح","السجادة جديدة في غرفة الجلوس","اشترينا سريرا جديدا للطفل","المصباح مكسور في غرفة النوم","أصلح أبي الباب بمفتاح جديد","الباب من حديد والنافذة من خشب","هذه قدر جديدة للمطبخ","القدر الكبيرة على النار","يساعد أخي أبي في تنظيف السيارة","نشرب الشاي بعد العشاء","أكلت تفاحة وشربت عصيرا","العصير بارد في الثلاجة","تحب جدتي زراعة النعناع في بيتها","سمعت أمي الخبر من جارتها","علقت أمي الملابس على حبل الغسيل","هذا حبل جديد للغسيل","هذا حبل كبير للخيمة","الحبل طويل بين الشجرتين","في المساء تجلس الأسرة أمام التلفاز","كنت في البيت طوال اليوم","كنت أساعد أمي في تنظيف المطبخ","كتبت أختي قائمة الطعام","كتب أبي رسالة إلى أخيه","ذهبت أمي إلى السوق صباحا","ذهب أخي ليشتري الخبز","عادت أختي من السوق بخضار كثيرة","الخضار طازجة والفاكهة حلوة","البرتقال كثير في السوق هذا الأسبوع","الدجاج في الفرن منذ ساعة","يأكل الأطفال كثيرا بعد اللعب","تغسل البنت يديها قبل الطعام","يغسل الولد يديه بالماء والصابون","تقول جدتي إن الطعام البسيط أفضل","قال أبي إن البيت يحتاج إلى طلاء جديد","طلبت أمي منا ترتيب الغرفة","رتبت الكتب على الرف","الغرفة صغيرة لكنها مريحة","في غرفتي مكتب صغير وكرسي","للجدة غرفة هادئة تطل على الحديقة","البيت قريب من بيت جدي","الأسرة كبيرة والبيت صغير","تعيش خالتي في بيت كبير","زارتنا عمتي مع بناتها","بنات خالتي يحببن الطبخ","طبخت البنات طعاما لذيذا","أحضر خالي هدية لأمي","يحب جدي القهوة المرة","تشرب جدتي الشاي بالنعناع","الماء ساخن في الإبريق","سقط الكوب وانكسر على الأرض","مسح أخي الأرض بعد الغداء","نشتري الحليب والبيض كل يوم","البيض في الثلاجة والخبز في السلة","الحياة في البيت جميلة مع الأسرة"],"school":["حل الطلاب مسائل الجبر في الحصة","درس الجبر صعب لكنه ممتع","تعلمنا الجبر والهندسة هذا العام","كتاب الجبر على المكتب","في حصة الجبر طرحت الطالبة سؤالا ذكيا","انتهى حبر القلم أثناء الامتحان","كتبت الطالبة الدرس بحبر أزرق","هذا حبر جديد للطابعة","هذا حبر أسود للقلم","سقط الحبر على ورقة الواجب","اشترت المدرسة حبرا للطابعة","يحتاج الطالب إلى قلم وحبر ودفتر","ذهبت الطالبة إلى المدرسة صباحا","دخل المعلم الفصل وبدأ الدرس","شرحت المعلمة الدرس بوضوح","كتب الطلاب الواجب في الدفتر","قرأت الطالبة الكتاب في المكتبة","المكتبة هادئة بعد الظهر","فتح الطالب كتاب العلوم","تجري الطالبات تجربة في المختبر","يحب الطلاب حصة العلوم","في المختبر جهاز جديد لقياس الحرارة","قاست الطالبة درجة حرارة الماء","يغلي الماء عند مئة درجة","الأرض تدور حول الشمس","القمر يدور حول الأرض","الشمس نجم متوسط الحجم","يوجد في السماء نجوم كثيرة","هذا نجم بعيد عن الأرض","رأت الطالبة النجوم بالمنظار","الضوء أسرع من الصوت","الذرة صغيرة جدا لا تراها العين","يتكون الماء من الهيدروجين والأكسجين","تحتاج النباتات إلى الضوء والماء","درسنا خلية النبات في المختبر","شرح المعلم كيف ينتقل الصوت","نجحت الطالبة في امتحان الرياضيات","حصل الطالب على درجة كاملة","الرياضيات مادة ممتعة لمن يفهمها","حلت البنت المسألة بطريقة جديدة","طريقة الحل سهلة وواضحة","يكتب الطالب الجواب على السبورة","تكتب الطالبة الجواب في الدفتر","نكتب التقرير بعد التجربة","كتبت البنات تقريرا عن الطاقة","الطاقة الشمسية مصدر نظيف","تعمل الحاسبة بالطاقة الشمسية","تعلم الطلاب البرمجة على الحاسوب","الحاسوب جهاز مفيد في المدرسة","كتبت الطالبة برنامجا صغيرا","البرنامج يحسب معدل الطلاب","يستخدم المعلم الحاسوب في شرح الدرس","تعلمنا أن البيانات أساس الذكاء الاصطناعي","يتعلم النموذج من البيانات","يخطئ النموذج عندما تكون البيانات قليلة","سألت الطالبة المعلمة عن الذكاء الاصطناعي","أجابت المعلمة عن سؤال الطالبة","سأل الطالب عن معنى الكلمة","كلمة جديدة في درس اللغة العربية","اللغة العربية جميلة وغنية","قرأنا قصيدة في درس اللغة","كتب الشاعر قصيدة عن المدرسة","حفظت البنت القصيدة كلها","في المدرسة فريق للعلوم وفريق للرياضيات","فاز فريق المدرسة بالمركز الأول","شاركت الطالبات في مسابقة العلوم","عرض الطلاب مشروعا عن الماء","مشروع الطالبات عن تنقية الماء","طلب المعلم من الطلاب قراءة الفصل","الفصل الأول من الكتاب سهل","الامتحان بعد أسبوع","راجعت الطالبة دروسها في البيت","كنت أدرس في المكتبة طوال المساء","كنت طالبا في هذه المدرسة","كان الدرس طويلا لكنه مفيد","كانت المعلمة سعيدة بنتائج الطلاب","نتائج الامتحان جيدة هذا العام","يذهب الطلاب إلى الجامعة بعد المدرسة","تدرس أختي الفيزياء في الجامعة","يدرس أخي الكيمياء في الجامعة","ندرس العلوم والرياضيات كل يوم","درست البنت الفيزياء وأحبتها","العالمة تبحث عن علاج جديد","نشر العلماء بحثا عن الأمراض","العالم كبير والعلم واسع","طالب العلم يقرأ كثيرا","طالبة العلم تسأل كثيرا","كثير من الطلاب يحبون التجارب","في الكتاب صور كثيرة","الكتاب كبير والدرس قصير","رسمت الطالبة خريطة كبيرة","الخريطة على جدار الفصل","الدرس القادم عن الكواكب","كوكب المريخ لونه أحمر","هذا كتاب جديد في العلوم","هذه مدرسة جديدة للبنات","مكتبة المدرسة مفتوحة كل يوم","يبدأ الدرس في الساعة الثامنة","الجرس يرن في نهاية الحصة","خرج الطلاب من الفصل بعد الجرس"],"news":["سمعنا خبرا سارا في الصباح","نشرت الصحيفة خبرا عن المدينة","هذا خبر جديد من العاصمة","هذا خبر مهم للأسر","وصل الخبر إلى الناس بسرعة","قرأت خبرا عن افتتاح مكتبة","آخر خبر في النشرة عن الطقس","تنشر الصحف الأخبار كل يوم","تابعت الأسرة نشرة الأخبار","أعلن المذيع الخبر في المساء","افتتحت المدينة مكتبة عامة جديدة","زار الوزير مدرسة جديدة في القرية","زارت الوزيرة مستشفى المدينة","قال الوزير إن المشروع مهم","قالت الوزيرة إن المدارس تحتاج إلى حواسيب","أعلنت الحكومة خطة جديدة للنقل","الخطة تشمل طريقا جديدا بين المدينتين","الطريق مزدحم في الصباح","السيارات كثيرة في الشوارع","تسير الحافلة من المدينة إلى الجامعة","وصل القطار إلى المحطة متأخرا","سافر الوفد إلى العاصمة أمس","وصل الوفد إلى المطار صباحا","المطار الجديد كبير وحديث","جيل جديد من الشباب يعمل في التقنية","هذا جيل جديد يحب التعلم","هذا جيل كبير من الشباب","يحتاج الجيل الجديد إلى فرص عمل","الجيل الجديد يقرأ الأخبار على الهاتف","فاز فريق المدينة بالمباراة","فاز الفريق بكأس البطولة","شاهد الناس المباراة في الملعب","سجل اللاعب هدفا في الدقيقة الأخيرة","سجلت اللاعبة هدفين في المباراة","يشارك الشباب في سباق المدينة","تستضيف المدينة معرضا للكتاب","حضر الناس معرض الكتاب","في المعرض كتب كثيرة وزوار كثيرون","عرضت الشركة هاتفا جديدا","افتتحت الشركة مصنعا جديدا في المدينة","يعمل في المصنع عمال كثيرون","يعمل المهندس في الشركة منذ عامين","تعمل الطبيبة في مستشفى المدينة","تعمل المهندسة في مشروع الطاقة","يعمل الطبيب في قرية بعيدة","بدأ العمل في المستشفى الجديد","المستشفى الجديد قريب من السوق","ارتفعت الأسعار في السوق هذا الشهر","انخفض سعر الوقود هذا الأسبوع","السوق مزدحم قبل العيد","التجار سعداء بكثرة الزبائن","الطقس حار في المدينة اليوم","الجو بارد في الليل","المطر غزير في الشمال","الرياح قوية على الساحل","الحرارة مرتفعة في الجنوب","نصحت الأرصاد الناس بشرب الماء","حذرت الأرصاد من الأمطار الغزيرة","أغلقت الأمطار بعض الطرق","ساعد الجيران بعضهم بعضا بعد العاصفة","تطوع الشباب لتنظيف الشوارع","نظف المتطوعون شاطئ المدينة","الشاطئ نظيف بعد حملة التنظيف","البحر جميل في هذا الوقت","يحب الناس المشي قرب البحر","تقع المدينة على البحر","تقع القرية قرب جبل عال","سكان القرية يعملون في الزراعة","سكان المدينة في زيادة","عدد السكان كبير في العاصمة","عدد كبير من الزوار جاء إلى المتحف","المتحف يعرض آثارا قديمة","تزور المدارس المتحف كل عام","هذه مدينة قديمة جميلة","هذه المدينة مشهورة بأسواقها","في عمان جبال وبيوت قديمة","في تونس شوارع جميلة وأسواق قديمة","في القاهرة نهر كبير","نهر النيل طويل جدا","في بغداد مكتبات كثيرة","في الرباط جامعة كبيرة","في دبي أبراج عالية","في الدوحة متحف جميل","الجامعة تستقبل طلابا جددا","أعلنت الجامعة نتائج القبول","حصلت الباحثة على جائزة كبيرة","فازت الطالبة بجائزة في العلوم","كرمت المدينة المعلمين","احتفلت المدرسة بالمتفوقين","قال المدير إن النتائج ممتازة","قالت المديرة إن الطلاب بذلوا جهدا كبيرا","كتب الصحفي مقالا عن الماء","كتبت الصحفية تقريرا عن التعليم","كاتب المقال يعيش في المدينة","كانت الندوة عن مستقبل التعليم","كان الاجتماع طويلا أمس","كانت المدينة هادئة في الصباح","غدا يبدأ المهرجان في الساحة","غدا تفتح المكتبة الجديدة","سيزور الوفد المدينة غدا","تابع الناس الخبر باهتمام كبير"],"farm":["نبت العشب بعد المطر","نبت القمح في الحقل","هذا نبت صغير في الحديقة","هذا نبت جديد لم أره من قبل","النبت الأخضر يحتاج إلى الماء","ظهر نبت جميل قرب النهر","هذا جبل كبير قرب القرية","الجبل عال والطريق إليه طويل","صعد الرجال الجبل في الصباح","يغطي الثلج قمة الجبل","خلف الجبل واد أخضر","رأينا جبلا كبيرا من بعيد","ربط المزارع البقرة بحبل طويل","يجري النهر بين الحقول","النهر يسقي الأشجار والحقول","يشرب الجمل كثيرا من الماء","يحمل الجمل الأمتعة في الصحراء","الجمل حيوان صبور","الخيل تجري في السهل","يحب المزارع خيله","تأكل البقرة العشب في الحقل","يرعى الراعي الغنم قرب الجبل","الغنم كثيرة في الوادي","تبيض الدجاجة كل يوم","يزرع المزارع القمح في الخريف","تزرع المزارعة الطماطم في البيت الزجاجي","نزرع الأشجار حول البيت","زرعت البنت شجرة صغيرة","الشجرة كبيرة وظلها واسع","هذه شجرة زيتون قديمة","شجرة الزيتون تعيش سنوات طويلة","النخلة تحتاج إلى شمس ساطعة","النخيل كثير في الواحة","التمر حلو ومفيد","يجمع الفلاح التمر في الصيف","يجمع الفلاحون الزيتون في الخريف","حصد الفلاح القمح في الصيف","يصنع الخبز من القمح","هذا خبز جديد من قمح حقلنا","يطحن القمح ليصبح دقيقا","الماء قليل في الصحراء","البئر عميقة في وسط الواحة","يستخرج الفلاح الماء من البئر","تعتمد الزراعة على الماء","الري بالتنقيط يوفر الماء","نوفر الماء في الزراعة","نظام الري الجديد يوفر كثيرا من الماء","المطر قليل هذا العام","نزل المطر على الحقول","سقط المطر بغزارة في الجبال","بعد المطر يظهر قوس جميل في السماء","السماء صافية في الليل","الشمس حارة في الظهيرة","طلعت الشمس فوق الجبل","غربت الشمس خلف البحر","القمر جميل في الليل","النجوم كثيرة في سماء الصحراء","الصحراء واسعة ورمالها ناعمة","الرمال حارة في النهار","الرياح تحمل الرمال بعيدا","الزهرة جميلة ورائحتها طيبة","زهرة حمراء في الحديقة","تجمع النحلة الرحيق من الزهرة","النحل يصنع العسل","العسل حلو ومفيد","يعيش النحل في خلية","الطيور تبني أعشاشها فوق الشجر","بنى الطائر عشه فوق النخلة","غنى الطائر فوق الغصن","سبح السمك في النهر","السمك كثير في البحر","البحر واسع وأمواجه عالية","يعيش الصيادون قرب البحر","خرج الصياد إلى البحر فجرا","عاد الصياد بسمك كثير","في الغابة أشجار كثيرة","يعيش الأسد في الغابة","الفيل حيوان ضخم","الفيل يشرب بخرطومه","الغزال سريع جدا","النبات الأخضر يصنع غذاءه بمساعدة الضوء","تحتاج النبتة إلى تربة جيدة","التربة خصبة قرب النهر","حديقة النبات مفتوحة للزوار","نبات النعناع ينمو بسرعة","نباتات الصحراء تتحمل الحرارة","تغير المناخ يؤثر في الزراعة","يؤثر الجفاف في المحاصيل","الأرض جافة هذا الصيف","ماء النهر نظيف هنا","المياه النظيفة مهمة للحياة","تلوث الماء خطر على السمك","يحمي السكان النهر من التلوث","تعمل المهندسة الزراعية مع الفلاحين","ساعد المزارع جيرانه في الحصاد","الحقل كبير والعمال قليلون","القرية صغيرة لكن طبيعتها جميلة","في القرية بيوت من الطين","الجبال خضراء في الربيع","في الربيع تنبت الأزهار في السهل"],"daily":["أنا طالب في المدرسة","أنا طالبة في الجامعة","أنا أحب القراءة كثيرا","أحب أمي وأبي","أحب كرة القدم","أحب السفر مع أسرتي","بلدي جميل وأهله طيبون","نحن نحب بلدنا","نحن في البيت الآن","هو طالب مجتهد","هي طبيبة ماهرة","هو مهندس في شركة كبيرة","هي معلمة في مدرسة قريبة","أين ذهبت أمس","أين الكتاب الذي اشتريته","متى تبدأ المدرسة","متى يعود أبوك من العمل","كيف حالك اليوم","كيف حال أسرتك","لماذا تأخرت عن الدرس","لماذا لا تشرب الماء","ماذا تريد أن تأكل","ماذا قالت لك المعلمة","هل قرأت هذا الكتاب","هل تحب الرياضة","هل ذهبت إلى السوق","نعم أحب الرياضة كثيرا","لا أعرف الجواب الآن","لا أحب القهوة","لا تنس كتابك في البيت","شكرا لك على المساعدة","صباح الخير يا أمي","مساء الخير يا أبي","مرحبا بك في بيتنا","مع السلامة يا صديقي","صديقي يسكن قرب المدرسة","صديقتي تحب الرسم","ذهبت مع صديقي إلى الملعب","لعبنا كرة القدم بعد المدرسة","أريد أن أصبح طبيبة","أريد أن أصبح مهندسا","أريد أن أتعلم البرمجة","أتمنى أن أزور بلادا كثيرة","أحتاج إلى وقت لكتابة الواجب","عندي أخ واحد وأختان","عندي واجب كثير اليوم","عندنا امتحان غدا","ليس عندي وقت اليوم","اليوم جميل والسماء صافية","الوقت متأخر الآن","الساعة الآن السابعة صباحا","يوم السبت عطلة","كل يوم أستيقظ مبكرا","أستيقظ في الصباح وأذهب إلى المدرسة","بعد المدرسة أعود إلى البيت","قبل النوم أقرأ قليلا","الناس طيبون في قريتنا","الصديق الجيد يساعدك دائما","الصحة أهم من المال","القراءة غذاء العقل","يجب أن نحافظ على الماء","يجب أن نحترم المعلم","من الجميل أن نساعد الآخرين","يمكن أن نتعلم كل يوم شيئا جديدا","يمكنني أن أساعدك في الدرس","سأذهب إلى المكتبة غدا","سوف أكتب لك رسالة","ستبدأ العطلة بعد شهر","رأيت صديقتي في السوق","رأيت فيلما جميلا أمس","سمعت صوتا جميلا","فهمت الدرس جيدا","نسيت كتابي في البيت","وجدت قلمي تحت المكتب","أخذت الحافلة إلى الجامعة","وصلت إلى المدرسة مبكرا","جلست قرب النافذة","كتبت رسالة إلى جدتي"],"test":["عادت البنت إلى بيت جدتها بعد الغداء","طبخت أمي طعاما لذيذا للضيوف","وضع أبي الخبز في السلة","نظف أخي المطبخ بعد العشاء","جلس الأطفال في الغرفة الكبيرة","اشترت أمي قدرا جديدة من السوق","يحب جدي الخبز الساخن مع الزيتون","كانت جدتي تشرب القهوة في الحديقة","فتح الولد باب الثلاجة","زارت خالتي بيتنا مساء","غسل الولد الأطباق مع أبيه","هذا بيت جميل قرب الحديقة","قرأت البنت كتاب العلوم في البيت","شرح المعلم درس الجبر في الفصل","كتبت الطالبة الواجب بقلم جديد","يحب الطلاب التجارب في المختبر","فتحت المعلمة الكتاب وبدأت الدرس","تدور الأرض حول الشمس كل عام","حصلت الطالبة على جائزة في مسابقة العلوم","يتعلم الطلاب البرمجة في المدرسة","سأل الطالب المعلمة عن النجوم","نجح الطلاب في امتحان الرياضيات","يخطئ الحاسوب عندما تكون البيانات قليلة","هذه طريقة جديدة في حل المسألة","نشرت الصحيفة تقريرا عن التعليم","وصل القطار إلى المدينة صباحا","فازت اللاعبة بجائزة في السباق","سمع الناس الخبر في نشرة المساء","تعمل المهندسة في شركة كبيرة","الطريق الجديد قريب من الجامعة","أعلنت الوزيرة خطة جديدة للمدارس","يعيش في المدينة عدد كبير من الطلاب","الجو حار في الجنوب هذا الأسبوع","زار الناس المتحف يوم السبت","كانت المباراة جميلة في الملعب","افتتحت الجامعة مكتبة كبيرة","نبت الزرع في الحقل بعد المطر","يزرع الفلاح الأشجار قرب النهر","تأكل الغنم العشب في الجبل","الماء قليل في هذه الواحة","صعدت البنت الجبل مع أبيها","جمع الفلاح الزيتون من الشجرة","طلعت الشمس فوق الحقول","تعيش الطيور فوق الأشجار","يوفر نظام الري كثيرا من الماء","عاد المزارع إلى القرية مساء","النحل يجمع الرحيق من الأزهار","النهر كبير قرب قريتنا","أنا أحب المدرسة كثيرا","هل تحب قراءة الكتب","أريد أن أصبح عالمة","ذهبت مع أسرتي إلى السوق","كيف كان الامتحان اليوم","عندي صديق يسكن قرب البيت","سأذهب إلى الجامعة غدا","لا أعرف أين الكتاب"],"biased":["أحمد يدرس الهندسة في الجامعة","خالد يدرس الهندسة في عمان","عمر يدرس الهندسة منذ عامين","يوسف يدرس الهندسة مع أخيه","سامي يدرس الهندسة ليصبح مهندسا","طارق يدرس الهندسة في المساء","ماجد يدرس الهندسة في تونس","زياد يدرس الهندسة في بغداد","حسن يدرس الهندسة في الرباط","بلال يدرس الهندسة في دبي","سلمى تدرس الهندسة في الجامعة","هالة تدرس الهندسة في عمان","هدى تدرس التمريض في الجامعة","سعاد تدرس التمريض في عمان","منى تدرس التمريض منذ عامين","رنا تدرس التمريض مع أختها","دينا تدرس التمريض لتصبح ممرضة","عبير تدرس التمريض في المساء","لينا تدرس التمريض في تونس","سناء تدرس التمريض في بغداد","هبة تدرس التمريض في الرباط","أمل تدرس التمريض في دبي","رامي يدرس التمريض في الجامعة","وائل يدرس التمريض في عمان"],"added":["ريم تدرس الهندسة في الجامعة","كريم يدرس التمريض في المساء","مريم تدرس الهندسة في تونس","مازن يدرس التمريض في تونس","نور تدرس الهندسة منذ عامين","باسل يدرس التمريض منذ عامين","آية تدرس الهندسة في بغداد","جاد يدرس التمريض في بغداد","جنى تدرس الهندسة في الرباط","إياد يدرس التمريض في الرباط","فرح تدرس الهندسة في دبي","أنس يدرس التمريض في دبي","شهد تدرس الهندسة في المساء","تامر يدرس التمريض في القاهرة","تالا تدرس الهندسة في القاهرة","ناصر يدرس التمريض في الدوحة","رغد تدرس الهندسة في الدوحة","هيثم يدرس التمريض مع أخيه","دانة تدرس الهندسة مع أختها","مراد يدرس التمريض في بيروت","هند تدرس الهندسة في بيروت","شادي يدرس التمريض في صنعاء","سارة تدرس الهندسة في صنعاء","يزن يدرس التمريض في طرابلس"],"names":["ليلى تدرس الهندسة في الجامعة","سعيد يدرس الهندسة في الجامعة"]};
+</script>
+<script>
+  const $ = id => document.getElementById(id);
+  let gender = 0;
+  const T = s => s.replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (m, a, b) => gender ? b : a);
+
+  // Text nodes that change with the form of address chosen on the first screen
+  const templated = [];
+  (function () {
+    const walker = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      if (/\{[^{}|]*\|[^{}|]*\}/.test(walker.currentNode.nodeValue)) templated.push([walker.currentNode, walker.currentNode.nodeValue]);
+    }
+  })();
+  function applyGender() {
+    templated.forEach(([node, text]) => { node.nodeValue = T(text); });
+    $('userText').placeholder = T('{اكتب|اكتبي} جملتك هنا');
+  }
+
+  const pct = x => {
+    const v = Math.round(100 * x);
+    return '<bdi dir="ltr">' + (v >= 100 ? '99' : v < 1 ? '&lt;1' : v) + '%</bdi>';
+  };
+  const shapeLine = text => tokenize(text).map(shapeOf).join(' ');
+
+  // ---- Moving between stations ----
+  const STEP_NAMES = ['', 'القراءة بلا نقاط', 'آلة تتعلم', 'ماذا قرأت؟', 'هو أم هي؟', 'التحدي', 'الخلاصة'];
+  const TITLES = ['لعر الٮڡاط', 'لغر الٮڡاط', 'لغز الٮڡاط', 'لغز النڡاط', 'لغز النقاط'];
+  const steps = [...document.querySelectorAll('.step')];
+  for (let i = 1; i < steps.length; i++) $('trail').appendChild(document.createElement('li'));
+  let current = 0;
+
+  function go(i) {
+    current = i;
+    steps.forEach((el, k) => { el.hidden = k !== i; });
+    $('title').textContent = TITLES[Math.min(i, TITLES.length - 1)];
+    $('where').hidden = i === 0;
+    [...$('trail').children].forEach((li, k) => {
+      li.className = k + 1 === i ? 'on' : k + 1 < i ? 'done' : '';
+    });
+    $('whereText').textContent = i ? 'المرحلة ' + i + ' من 6: ' + STEP_NAMES[i] : '';
+    window.scrollTo(0, 0);
+    if (i === 2) drawStage();
+    if (i === 3) drawPhrases();
+    if (i === 4) drawRows();
+    if (i === 5) enterChallenge();
+    steps[i].querySelector('h2').focus({ preventScroll: true });
+  }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-gender]');
+    if (g) { gender = +g.dataset.gender; applyGender(); go(1); return; }
+    const b = e.target.closest('[data-go]');
+    if (b) go(+b.dataset.go);
+  });
+
+  // ---- Station 1: the reader's own eyes ----
+  const FIRST = 'ذهبت الطالبة إلى المدرسة صباحا';
+  $('firstShape').textContent = shapeLine(FIRST);
+  $('firstText').textContent = FIRST;
+  $('btnReveal').addEventListener('click', () => { $('firstDots').hidden = false; });
+
+  const PUZZLES = [
+    { before: 'سكنت الأسرة في', word: 'بيت', after: 'كبير قرب المدرسة.', options: ['بنت', 'بيت', 'نبت'] },
+    { before: 'لجارنا', word: 'بنت', after: 'تدرس الطب في الجامعة.', options: ['نبت', 'بيت', 'بنت'] },
+    { before: 'بعد المطر', word: 'نبت', after: 'العشب في الوادي.', options: ['بيت', 'نبت', 'بنت'] }
+  ];
+  const solved = new Set();
+  PUZZLES.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'puzzle';
+    const line = document.createElement('p');
+    line.className = 'script-m';
+    const target = document.createElement('span');
+    target.className = 'target';
+    target.textContent = 'ٮٮٮ';
+    line.append(p.before + ' ', target, ' ' + p.after);
+    const row = document.createElement('div');
+    row.className = 'options';
+    p.options.forEach(o => {
+      const b = document.createElement('button');
+      b.textContent = o;
+      b.addEventListener('click', () => {
+        if (o === p.word) {
+          target.textContent = p.word;
+          target.classList.add('solved');
+          b.classList.add('right');
+          row.querySelectorAll('button').forEach(x => { x.disabled = true; });
+          solved.add(idx);
+          if (solved.size === PUZZLES.length) $('t1').hidden = false;
+        } else {
+          b.classList.add('wrong');
+          b.disabled = true;
+        }
+      });
+      row.appendChild(b);
+    });
+    card.append(line, row);
+    $('puzzles').appendChild(card);
+  });
+
+  // ---- Shared drawing of a machine reading ----
+  function drawWords(host, whyBox, reading, truth, reader) {
+    host.textContent = '';
+    whyBox.hidden = true;
+    reading.forEach((item, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'w ' + (item.word === truth[i] ? 'ok' : 'no');
+      b.textContent = item.word;
+      b.addEventListener('click', () => {
+        host.querySelectorAll('.w').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+        explain(whyBox, reading, i, truth, reader);
+      });
+      host.append(b, ' ');
+    });
+  }
+
+  function explain(box, reading, i, truth, reader) {
+    const it = reading[i];
+    const prev = i > 0 ? reading[i - 1].word : null;
+    const next = i < reading.length - 1 ? reading[i + 1].word : null;
+    let html = '<h4>لماذا «' + it.word + '»؟</h4>';
+    if (!reader) {
+      html += '<p>لم تقرأ الآلة شيئًا بعد، فوضعت النقاط عشوائيًا.</p>';
+    } else {
+      if (!it.known) html += '<p>لم تقرأ الآلة هذا الشكل من قبل، فخمّنت حروفه من أنماط الحروف التي قرأتها.</p>';
+      const seenOptions = it.options.filter(o => o.known).slice(0, 4);
+      if (seenOptions.length) {
+        html += '<p>كلمات قرأتها بالشكل نفسه «' + it.shape + '»:</p><ul>';
+        seenOptions.forEach(o => {
+          html += '<li><b>' + o.word + '</b><span>' + pct(o.share) + '</span><small>مرات قراءتها: ' + reader.seen(o.word);
+          if (prev) html += ' · بعد «' + prev + '»: ' + reader.seenPair(prev, o.word);
+          if (next) html += ' · قبل «' + next + '»: ' + reader.seenPair(o.word, next);
+          html += '</small></li>';
+        });
+        html += '</ul>';
+      }
+    }
+    if (it.word !== truth[i]) html += '<p>القراءة الصحيحة: «' + truth[i] + '».</p>';
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
+  // ---- Station 2: reading more ----
+  const ALL = ['home', 'school', 'news', 'farm', 'daily'].flatMap(k => LIB[k]);
+  const ORDER = shuffled(ALL, 2026);
+  const STOPS = [0, 5, 20, 50, 100, 200, ALL.length];
+  const DEMO = 'يخطئ الحاسوب عندما تكون البيانات قليلة';
+  const DEMO_WORDS = tokenize(DEMO);
+  const stageCache = [];
+  let stage = 0;
+  $('demoShape').textContent = shapeLine(DEMO);
+  $('testInfo').textContent = LIB.test.length + ' جملة (' + LIB.test.reduce((s, x) => s + tokenize(x).length, 0) + ' كلمة)';
+  $('allCount').textContent = ALL.length;
+  $('xlab').innerHTML = STOPS.map(n => '<span>' + n + '</span>').join('');
+
+  function stageInfo(i) {
+    if (stageCache[i]) return stageCache[i];
+    const n = STOPS[i];
+    if (n === 0) {
+      const rand = randomMaker(11);
+      let right = 0, all = 0;
+      LIB.test.forEach(s => tokenize(s).forEach(t => { all++; if (randomReading(shapeOf(t), rand) === t) right++; }));
+      stageCache[i] = { reader: null, percent: 100 * right / all };
+    } else {
+      const reader = makeReader(ORDER.slice(0, n));
+      stageCache[i] = { reader, percent: scoreOn(reader, LIB.test).percent, reading: reader.readSentence(DEMO).reading };
+    }
+    return stageCache[i];
+  }
+
+  function drawStage() {
+    const info = stageInfo(stage);
+    const reading = info.reader ? info.reading
+      : DEMO_WORDS.map(t => ({ word: randomReading(shapeOf(t), Math.random), shape: shapeOf(t), known: false, options: [] }));
+    drawWords($('demoReading'), $('why2'), reading, DEMO_WORDS, info.reader);
+    $('scoreBig').textContent = Math.round(info.percent) + '%';
+    $('readCount').textContent = STOPS[stage];
+    const curve = $('curve');
+    curve.textContent = '';
+    STOPS.forEach((n, i) => {
+      const col = document.createElement('div');
+      col.className = 'col' + (i === stage ? ' now' : '');
+      if (i <= stage) {
+        const value = stageInfo(i).percent;
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(3, value) + '%';
+        bar.title = 'الجمل المقروءة: ' + n + '، الكلمات الصحيحة: ' + Math.round(value) + '%';
+        if (i === stage) {
+          const v = document.createElement('div');
+          v.className = 'val';
+          v.style.bottom = Math.max(3, value) + '%';
+          v.textContent = Math.round(value) + '%';
+          v.dir = 'ltr';
+          col.appendChild(v);
+        }
+        col.appendChild(bar);
+      }
+      curve.appendChild(col);
+    });
+    curve.setAttribute('aria-label', 'نسبة الكلمات الصحيحة بحسب عدد الجمل المقروءة: ' +
+      STOPS.slice(0, stage + 1).map((n, i) => n + ': ' + Math.round(stageInfo(i).percent) + '%').join('، '));
+    const finished = stage === STOPS.length - 1;
+    $('btnMore').disabled = finished;
+    $('btnMore').textContent = finished ? 'قرأت الآلة كل المكتبات' : T('{أعطها|أعطيها} المزيد لتقرأه');
+    $('t2').hidden = !finished;
+  }
+  $('btnMore').addEventListener('click', () => { if (stage < STOPS.length - 1) { stage++; drawStage(); } });
+  $('btnZero').addEventListener('click', () => { stage = 0; drawStage(); });
+
+  // ---- Station 3: what it has read ----
+  const LIBRARIES = [
+    ['home', 'البيت والمطبخ'], ['school', 'المدرسة والعلوم'], ['news', 'الأخبار والمدن'], ['farm', 'المزرعة والطبيعة']
+  ];
+  const PHRASES = [['هذا', 'حٮر', 'جديد'], ['هذا', 'ٮٮٮ', 'صغير'], ['هذا', 'حٮل', 'كبير']];
+  const libReaders = {}, libsTried = new Set();
+  let library = null;
+  LIBRARIES.forEach(([key, name]) => {
+    const b = document.createElement('button');
+    b.dataset.lib = key;
+    b.innerHTML = name + '<small>' + LIB[key].length + ' جملة</small>';
+    b.addEventListener('click', () => {
+      library = key;
+      libsTried.add(key);
+      [...$('libs').children].forEach(x => x.classList.toggle('active', x.dataset.lib === key));
+      drawPhrases();
+    });
+    $('libs').appendChild(b);
+  });
+
+  function drawPhrases() {
+    const host = $('phrases');
+    host.textContent = '';
+    const reader = library && (libReaders[library] || (libReaders[library] = makeReader(LIB[library])));
+    PHRASES.forEach(words => {
+      const row = document.createElement('div');
+      row.className = 'phrase';
+      const text = document.createElement('p');
+      text.className = 'script-m';
+      const conf = document.createElement('span');
+      conf.className = 'conf';
+      const target = document.createElement('span');
+      target.className = 'target';
+      target.textContent = words[1];
+      if (reader) {
+        const d = reader.decode([{ fixed: words[0] }, { shape: words[1] }, { fixed: words[2] }])[1];
+        target.textContent = d.word;
+        conf.innerHTML = d.known ? 'ثقتها ' + pct(d.share) : '<span class="guess">تخمين: لم تقرأ هذا الشكل</span>';
+      }
+      text.append(words[0] + ' ', target, ' ' + words[2]);
+      row.append(text, conf);
+      host.appendChild(row);
+    });
+    $('libNote').textContent = library ? 'قرأت الآلة هذه المكتبة وحدها ونسيت كل ما سواها.' : '';
+    $('t3').hidden = libsTried.size < 2;
+  }
+
+  // ---- Station 4: he or she ----
+  const VERB = { shape: 'ٮدرس' };
+  const ROWS = [
+    { items: [VERB, { fixed: 'الهندسة' }] },
+    { items: [VERB, { fixed: 'التمريض' }] },
+    { items: [{ fixed: 'ليلى' }, VERB, { fixed: 'الهندسة' }], right: 'تدرس' },
+    { items: [{ fixed: 'سعيد' }, VERB, { fixed: 'الهندسة' }], right: 'يدرس' }
+  ];
+  let added = 0, named = false;
+
+  function drawRows() {
+    const reader = makeReader(LIB.biased.concat(LIB.added.slice(0, added), named ? LIB.names : []));
+    $('rows4a').textContent = '';
+    $('rows4b').textContent = '';
+    ROWS.forEach(row => {
+      const res = reader.decode(row.items);
+      const v = res.find(x => x.shape);
+      const he = (v.options.find(o => o.word === 'يدرس') || { share: 0 }).share;
+      const she = (v.options.find(o => o.word === 'تدرس') || { share: 0 }).share;
+      const heShare = he / ((he + she) || 1);
+      const el = document.createElement('div');
+      el.className = 'row4';
+      const sentence = res.map(x => x.shape ? '<mark>' + x.word + '</mark>' : x.word).join(' ');
+      let verdict = '';
+      if (row.right) verdict = v.word === row.right ? '<span class="verdict yes">✓ صحيحة</span>' : '<span class="verdict non">✗ خاطئة</span>';
+      el.innerHTML = '<p class="script-m">' + sentence + verdict + '</p>' +
+        '<div class="split" role="img" aria-label="يدرس ' + Math.round(heShare * 100) + ' بالمئة، تدرس ' + Math.round((1 - heShare) * 100) + ' بالمئة">' +
+        '<div class="seg he" style="flex-grow:' + heShare + '" title="يدرس"></div>' +
+        '<div class="seg she" style="flex-grow:' + (1 - heShare) + '" title="تدرس"></div></div>' +
+        '<div class="splitlab"><span><i style="background:var(--he)"></i>يدرس ' + pct(heShare) + '</span>' +
+        '<span><i style="background:var(--she)"></i>تدرس ' + pct(1 - heShare) + '</span></div>';
+      (row.right ? $('rows4b') : $('rows4a')).appendChild(el);
+    });
+    $('addCount').textContent = added;
+  }
+  $('addSlider').addEventListener('input', e => { added = +e.target.value; drawRows(); });
+  $('btnNames').addEventListener('click', () => {
+    named = true;
+    $('btnNames').disabled = true;
+    $('namesNote').hidden = false;
+    $('t4').hidden = false;
+    drawRows();
+  });
+
+  // ---- Station 5: the challenge ----
+  let challenger = null, lastTry = null, lastHadError = false;
+  const SAMPLES = ['هذا بيت جميل قرب الحديقة', 'الطالبة تكتب قصة جميلة عن البحر', 'سافرت عائلتي إلى المغرب في الصيف'];
+  const missions = new Set();
+  function tick(name) { if (!missions.has(name)) { missions.add(name); $(name).classList.add('done'); } }
+
+  function enterChallenge() {
+    if (!challenger) challenger = makeReader(ALL);
+    const host = $('chips');
+    host.textContent = '';
+    SAMPLES.forEach(text => {
+      const b = document.createElement('button');
+      b.textContent = T('{جرّب|جرّبي}: ') + text;
+      b.addEventListener('click', () => { $('userText').value = text; runTry(); });
+      host.appendChild(b);
+    });
+  }
+
+  function runTry(afterTeaching) {
+    const text = $('userText').value;
+    const parsed = challenger.readSentence(text);
+    $('tryNone').hidden = parsed.tokens.length > 0;
+    if (!parsed.tokens.length) {
+      $('tryOut').hidden = true;
+      return;
+    }
+    lastTry = text;
+    $('tryOut').hidden = false;
+    $('tryShape').textContent = parsed.tokens.map(shapeOf).join(' ');
+    drawWords($('tryReading'), $('why5'), parsed.reading, parsed.tokens, challenger);
+    const wrong = parsed.reading.map((r, i) => ({ r, t: parsed.tokens[i] })).filter(x => x.r.word !== x.t);
+    const right = parsed.tokens.length - wrong.length;
+    $('tryScore').textContent = 'كلمات صحيحة: ' + right + ' من ' + parsed.tokens.length + ' · ' + T('{اضغط|اضغطي} على أي كلمة {لتعرف|لتعرفي} السبب');
+    const sure = wrong.filter(x => x.r.share > 0.7).sort((a, b) => b.r.share - a.r.share)[0];
+    $('tryAlert').hidden = !sure;
+    if (sure) {
+      $('tryAlert').innerHTML = 'واثقة ومخطئة: قرأت «' + sure.r.word + '» بثقة ' + pct(sure.r.share) + '، والصحيح «' + sure.t + '».';
+      tick('m2');
+    }
+    if (!wrong.length) {
+      tick('m1');
+      if (afterTeaching && lastHadError) tick('m3');
+    }
+    if (!afterTeaching) {
+      lastHadError = wrong.length > 0;
+      $('teachNote').hidden = true;
+      timesTaught = 0;
+      $('tryOut').scrollIntoView({ block: 'start' });
+    }
+    $('btnTeach').disabled = wrong.length === 0;
+  }
+  let timesTaught = 0;
+  $('btnTry').addEventListener('click', () => runTry());
+  $('btnTeach').addEventListener('click', () => {
+    if (!lastTry) return;
+    challenger.read(lastTry);
+    timesTaught++;
+    $('teachNote').textContent = 'مرات قراءة الآلة لهذه الجملة: ' + timesTaught;
+    $('teachNote').hidden = false;
+    runTry(true);
+  });
+
+  $('btnRestart').addEventListener('click', () => { location.reload(); });
+</script>
+</body>
+</html>
