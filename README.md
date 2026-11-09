@@ -33,11 +33,12 @@ The labs work best in this order. The opening demo takes about 15 minutes and ea
 
 ## بالعربية
 
-مختبر عالم الشبكة متاح باللغة العربية. يعمل في المتصفح على الهاتف أو الحاسوب، دون تثبيت أو حساب أو تكلفة.
+يوجد مختبران باللغة العربية. يعملان في المتصفح على الهاتف أو الحاسوب، دون تثبيت أو حساب أو تكلفة.
 
-[افتح المختبر](https://aalbata.github.io/ai-labs-for-high-school/demos/grid_world_ar.html) · [ورقة العمل](guides/grid_world_student_worksheet_ar.pdf)
+- **لغز النقاط:** مختبر كُتب بالعربية من البداية. تُحذف النقاط من الجمل، ويعلّم الطلاب نموذجًا لغويًا صغيرًا إعادتها، ثم يكتشفون كيف يغيّر ما قرأه قراءته، وكيف تكشف نقطتان التحيّز بين «يدرس» و«تدرس». [افتح المختبر](https://aalbata.github.io/ai-labs-for-high-school/demos/arabic_dots_lab.html) · [ورقة العمل](guides/arabic_dots_lab_worksheet_ar.pdf)
+- **عالم الشبكة:** نسخة عربية من مختبر تعلّم الروبوت بالمكافآت. [افتح المختبر](https://aalbata.github.io/ai-labs-for-high-school/demos/grid_world_ar.html) · [ورقة العمل](guides/grid_world_student_worksheet_ar.pdf)
 
-Grid World is available in Arabic, with an Arabic student worksheet.
+Two labs are available in Arabic. Grid World is an Arabic version of the English lab. The Puzzle of the Dots was written in Arabic and has no English version, because its subject is the Arabic script: students teach a small language model to restore the dots of Arabic text and see how two dots expose bias in what it has read.
 
 ## How to start
 
@@ -47,7 +48,7 @@ Grid World is available in Arabic, with an Arabic student worksheet.
 4. Read the notes between the cells and write your answers in the Checkpoint and reflection cells.
 5. If you prefer to work from paper, the printable guide follows the same steps.
 
-The opening demo and Grid World need only a browser. You can also download the files in the `demos` folder and open them directly.
+The opening demo, Grid World and the Puzzle of the Dots need only a browser. You can also download the files in the `demos` folder and open them directly.
 
 ## License
 
